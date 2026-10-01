@@ -40,6 +40,18 @@ git clone https://github.com/tungnt1203/claude-music
 cp -r claude-music/skills/music ~/.claude/skills/
 ```
 
+## Plugin chạy những gì
+
+Mọi thứ chạy trên máy bạn, thông qua một script shell duy nhất là [`skills/music/scripts/music.sh`](skills/music/scripts/music.sh).
+
+- **Phát nhạc**: [`mpv`](https://mpv.io) stream tiếng từ YouTube, hoặc từ link bạn dán, thông qua [`yt-dlp`](https://github.com/yt-dlp/yt-dlp). Script điều khiển mpv qua một socket nằm trong thư mục tạm trên máy.
+- **Cài đặt** (chỉ khi máy còn thiếu tool, và chỉ khi Claude chạy `music.sh install`):
+  - macOS: `brew install mpv yt-dlp`
+  - Linux: tải bản chạy sẵn của yt-dlp từ [GitHub releases](https://github.com/yt-dlp/yt-dlp/releases) vào `~/.local/bin` (hoặc dùng `pipx install yt-dlp`), và cài mpv bằng trình quản lý gói (apt, dnf, pacman, zypper hoặc apk) qua `sudo`
+- **Kết nối mạng**: chỉ tới YouTube hoặc link bạn đưa, và tới GitHub khi cài yt-dlp. Không thu thập dữ liệu sử dụng, không gửi dữ liệu đi đâu khác.
+
+Cần chạy Claude Code trên macOS hoặc Linux. Plugin không dùng được trên claude.ai hay app điện thoại, vì ở đó không phát được tiếng ra máy tính của bạn.
+
 ## Hỏi đáp
 
 **Có tải nhạc về máy không?** Không. Nhạc chỉ stream qua RAM, không lưu file nào xuống ổ cứng.
@@ -48,4 +60,4 @@ cp -r claude-music/skills/music ~/.claude/skills/
 
 ## License
 
-MIT
+MIT. Đây là dự án cộng đồng, không liên kết với Anthropic.
