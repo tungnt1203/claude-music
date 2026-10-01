@@ -22,12 +22,9 @@ Không cần API key hay tài khoản. Chỉ phát tiếng, không mở tab trì
 ## Yêu cầu
 
 - macOS hoặc Linux (Windows thì dùng WSL)
-- [`mpv`](https://mpv.io) và [`yt-dlp`](https://github.com/yt-dlp/yt-dlp)
-
-```bash
-brew install mpv yt-dlp            # macOS
-sudo apt-get install mpv yt-dlp    # Debian/Ubuntu (hoặc: pipx install yt-dlp để có bản mới hơn)
-```
+- [`mpv`](https://mpv.io) và [`yt-dlp`](https://github.com/yt-dlp/yt-dlp). **Lần đầu phát nhạc, hai tool này được cài tự động.** Claude sẽ tự chạy `music.sh install`:
+  - **macOS**: `brew install mpv yt-dlp` (cần có [Homebrew](https://brew.sh))
+  - **Linux**: yt-dlp được tải bản chạy sẵn mới nhất vào `~/.local/bin`, không cần quyền root. mpv được cài qua trình quản lý gói (apt, dnf, pacman, zypper hoặc apk). Nếu sudo đòi mật khẩu, Claude sẽ đưa bạn đúng một lệnh để tự chạy bằng `! sudo …`
 
 Trên Linux, script cần `socat` hoặc `python3` để giao tiếp với mpv. Đa số máy đã có sẵn một trong hai.
 

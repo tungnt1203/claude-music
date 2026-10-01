@@ -17,28 +17,95 @@ usage: music.sh <command> [args]
   now                print the current track
   stop               stop playback and quit mpv
   doctor             check dependencies
+  install            install missing dependencies (mpv, yt-dlp)
 EOF
 }
 
 # --- dependencies -------------------------------------------------------------
 
-install_hint() {
-  if command -v brew >/dev/null; then echo "brew install $*"
-  elif command -v apt-get >/dev/null; then echo "sudo apt-get install -y $*"
-  elif command -v dnf >/dev/null; then echo "sudo dnf install -y $*"
-  elif command -v pacman >/dev/null; then echo "sudo pacman -S $*"
-  else echo "install: $*"; fi
+# `install` may put a current yt-dlp here without root; prefer it over an older distro package.
+BIN_DIR="$HOME/.local/bin"
+export PATH="$BIN_DIR:$PATH"
+
+missing_deps() {
+  command -v mpv >/dev/null || echo mpv
+  command -v yt-dlp >/dev/null || echo yt-dlp
 }
 
 need_deps() {
-  local missing=()
-  command -v mpv >/dev/null || missing+=(mpv)
-  command -v yt-dlp >/dev/null || missing+=(yt-dlp)
-  if [ ${#missing[@]} -gt 0 ]; then
-    echo "✗ missing: ${missing[*]}" >&2
-    echo "  run: $(install_hint "${missing[@]}")" >&2
+  local missing; missing=$(missing_deps | xargs)
+  if [ -n "$missing" ]; then
+    echo "✗ missing: $missing" >&2
+    echo "  run: $0 install" >&2
     exit 2
   fi
+}
+
+# True when we can run as root without prompting (sudo would otherwise ask for a password).
+can_root() { [ "$(id -u)" = 0 ] || { command -v sudo >/dev/null && sudo -n true 2>/dev/null; }; }
+as_root() { if [ "$(id -u)" = 0 ]; then "$@"; else sudo -n "$@"; fi; }
+
+pkg_install_cmd() {
+  if command -v apt-get >/dev/null; then echo "apt-get install -y -qq $*"
+  elif command -v dnf >/dev/null; then echo "dnf install -y $*"
+  elif command -v pacman >/dev/null; then echo "pacman -S --noconfirm $*"
+  elif command -v zypper >/dev/null; then echo "zypper install -y $*"
+  elif command -v apk >/dev/null; then echo "apk add $*"
+  fi
+}
+
+# Standalone yt-dlp release binary into ~/.local/bin (no root, always current).
+install_ytdlp_binary() {
+  local asset
+  case "$(uname -s)-$(uname -m)" in
+    Darwin-*) asset=yt-dlp_macos ;;
+    Linux-x86_64) asset=yt-dlp_linux ;;
+    Linux-aarch64|Linux-arm64) asset=yt-dlp_linux_aarch64 ;;
+    *) command -v python3 >/dev/null && asset=yt-dlp || return 1 ;;
+  esac
+  local url="https://github.com/yt-dlp/yt-dlp/releases/latest/download/$asset" tmp="$BIN_DIR/yt-dlp.tmp"
+  mkdir -p "$BIN_DIR"
+  echo "→ downloading $asset to $BIN_DIR/yt-dlp"
+  if command -v curl >/dev/null; then curl -fsSL "$url" -o "$tmp" 2>/dev/null
+  elif command -v wget >/dev/null; then wget -qO "$tmp" "$url"
+  else return 1; fi || { rm -f "$tmp"; return 1; }
+  chmod +x "$tmp" && mv "$tmp" "$BIN_DIR/yt-dlp" && "$BIN_DIR/yt-dlp" --version >/dev/null 2>&1 \
+    || { rm -f "$BIN_DIR/yt-dlp"; return 1; }
+}
+
+# Exit 0 when everything is installed; exit 3 with the exact command when the user must act.
+install_deps() {
+  local missing; missing=$(missing_deps | xargs)
+  [ -z "$missing" ] && { echo "✓ already installed"; return 0; }
+
+  if command -v brew >/dev/null; then
+    echo "→ brew install $missing"
+    brew install $missing
+  else
+    if [[ " $missing " == *" yt-dlp "* ]]; then
+      { command -v pipx >/dev/null && pipx install yt-dlp; } || install_ytdlp_binary \
+        || echo "  (download failed, falling back to the package manager)"
+    fi
+    missing=$(missing_deps | xargs)
+    if [ -n "$missing" ]; then
+      local cmd; cmd=$(pkg_install_cmd $missing)
+      if [ "$(uname -s)" = Darwin ]; then
+        echo "✗ $missing needs Homebrew: install it from https://brew.sh, then run: brew install $missing" >&2; exit 3
+      elif [ -z "$cmd" ]; then
+        echo "✗ no supported package manager; install manually: $missing (https://mpv.io/installation/)" >&2; exit 3
+      fi
+      can_root || { echo "✗ needs your password, run: sudo $cmd" >&2; exit 3; }
+      echo "→ $cmd"
+      [ "${cmd%% *}" = apt-get ] && { as_root apt-get update -qq >"$LOG" 2>&1 || true; }
+      # shellcheck disable=SC2086
+      as_root env DEBIAN_FRONTEND=noninteractive $cmd >>"$LOG" 2>&1 \
+        || { echo "✗ '$cmd' failed:" >&2; tail -5 "$LOG" >&2; exit 3; }
+    fi
+  fi
+
+  missing=$(missing_deps | xargs)
+  [ -z "$missing" ] || { echo "✗ still missing: $missing" >&2; exit 3; }
+  echo "✓ installed: mpv, yt-dlp"
 }
 
 # --- IPC ----------------------------------------------------------------------
@@ -70,16 +137,24 @@ data_str() { sed -n 's/.*"data":"\(.*\)","request_id".*/\1/p' | sed 's/\\"/"/g; 
 
 json_escape() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
 
-source_for() { case "$1" in http://*|https://*) echo "$1" ;; *) echo "ytdl://ytsearch1:$1" ;; esac; }
+# URLs pass through. Queries resolve to the first *video* result: the top hit is often a
+# channel (e.g. an artist name), which mpv would expand into hundreds of queued videos.
+source_for() {
+  case "$1" in http://*|https://*) echo "$1"; return ;; esac
+  local url
+  url=$(yt-dlp --no-warnings --flat-playlist --print "%(ie_key)s %(url)s" "ytsearch5:$1" 2>/dev/null \
+    | awk '$1 == "Youtube" { print $2; exit }') || true
+  echo "${url:-ytdl://ytsearch1:$1}"
+}
 
 title() { ipc '{"command":["get_property","media-title"]}' | data_str; }
 
-# Wait until mpv resolves the search into a real title.
+# Wait until mpv has real metadata (media-title falls back to the filename until then).
 wait_title() {
-  local t
+  local t f
   for _ in $(seq 1 40); do
-    t=$(title)
-    if [ -n "$t" ] && [[ "$t" != ytsearch* ]] && [[ "$t" != http* ]]; then echo "$t"; return 0; fi
+    t=$(title); f=$(ipc '{"command":["get_property","filename"]}' | data_str)
+    if [ -n "$t" ] && [ "$t" != "$f" ] && [[ "$t" != ytsearch* ]]; then echo "$t"; return 0; fi
     sleep 0.5
   done
   return 1
@@ -125,5 +200,7 @@ case "$cmd" in
     rm -f "$SOCK"; echo "⏹ stopped" ;;
   doctor)
     need_deps; echo "✓ mpv $(mpv --version | head -1 | awk '{print $2}'), yt-dlp $(yt-dlp --version)" ;;
+  install)
+    install_deps ;;
   *) usage; exit 1 ;;
 esac

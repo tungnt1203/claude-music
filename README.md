@@ -22,12 +22,9 @@ No API keys or accounts needed. Audio only, and no browser tab.
 ## Requirements
 
 - macOS or Linux (on Windows, use WSL)
-- [`mpv`](https://mpv.io) and [`yt-dlp`](https://github.com/yt-dlp/yt-dlp)
-
-```bash
-brew install mpv yt-dlp            # macOS
-sudo apt-get install mpv yt-dlp    # Debian/Ubuntu (or: pipx install yt-dlp for a newer version)
-```
+- [`mpv`](https://mpv.io) and [`yt-dlp`](https://github.com/yt-dlp/yt-dlp). **These install automatically** the first time you play something. Claude runs `music.sh install` for you:
+  - **macOS**: `brew install mpv yt-dlp` (needs [Homebrew](https://brew.sh))
+  - **Linux**: yt-dlp is downloaded as the latest standalone binary into `~/.local/bin`, which needs no root. mpv comes from your package manager (apt, dnf, pacman, zypper or apk). If sudo needs a password, Claude shows you the one command to run yourself with `! sudo …`
 
 On Linux, [`socat`](http://www.dest-unreach.org/socat/) or `python3` is used to talk to mpv. Most systems already have one of them.
 

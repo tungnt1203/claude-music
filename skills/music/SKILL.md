@@ -18,6 +18,7 @@ Control playback with `scripts/music.sh` in this skill's base directory. Every c
 | what's playing | `scripts/music.sh now` |
 | stop | `scripts/music.sh stop` |
 | check setup | `scripts/music.sh doctor` |
+| install mpv / yt-dlp | `scripts/music.sh install` |
 
 `play` and `add` accept a search query (first YouTube result) or a YouTube video/playlist URL.
 
@@ -32,5 +33,6 @@ For `/music` with no argument, or requests like "put something on", "music to fo
 ## Notes
 - Keep replies short: relay the command's output line (▶ title) and little else. Reply in the user's language.
 - `play` takes ~3–5s to resolve. If it prints "loading", run `now` a few seconds later.
-- Exit code 2 means mpv or yt-dlp is missing; the output includes the install command. Ask before installing.
+- Exit code 2 means mpv or yt-dlp is missing. Say in one line that you're installing them, run `scripts/music.sh install` (it can take a minute or two), then retry the original command. Don't ask first: the user asked for music, and Claude Code's permission prompt already gates the install.
+- `install` exit code 3 means the user has to act (usually a sudo password on Linux, or Homebrew missing on macOS). Show the exact command from the output and suggest running it with the `!` prefix, e.g. `! sudo apt-get install -y mpv`, then retry.
 - On failure, the error output points to the mpv log file.
