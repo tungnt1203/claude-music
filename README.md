@@ -1,4 +1,6 @@
-# cmusic 🎵
+![cmusic](assets/logo.png)
+
+# cmusic
 
 [Tiếng Việt](README.vi.md)
 
