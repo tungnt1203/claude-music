@@ -112,7 +112,11 @@ PY
   fi
 }
 
-running() { ipc '{"command":["get_property","pid"]}' | grep -q '"error":"success"'; }
+# Check the process, not the socket: mpv can be slow to answer IPC while it opens a stream.
+running() {
+  if command -v pgrep >/dev/null; then pgrep -f -- "--input-ipc-server=$SOCK" >/dev/null 2>&1
+  else ipc '{"command":["get_property","pid"]}' | grep -q '"error":"success"'; fi
+}
 
 # Extract the "data" string from an mpv reply (titles may contain escaped quotes).
 data_str() { sed -n 's/.*"data":"\(.*\)","request_id".*/\1/p' | sed 's/\\"/"/g; s/\\\\/\\/g'; }
@@ -167,16 +171,17 @@ case "$cmd" in
     if ipc '{"command":["get_property","pause"]}' | grep -q '"data":true'; then echo "⏸ paused"; else echo "▶ resumed"; fi ;;
   next|skip)
     running || { echo "⏹ nothing playing"; exit 0; }
-    if ipc '{"command":["playlist-next","force"]}' | grep -q '"error":"success"'; then
-      sleep 1; t=$(wait_title) && echo "⏭ $t" || echo "⏭"
-    else echo "⏹ queue ended"; fi ;;
+    # On the last track mpv quits (no --idle), which ends playback.
+    ipc '{"command":["playlist-next","force"]}' >/dev/null
+    sleep 1
+    if running; then t=$(wait_title) && echo "⏭ $t" || echo "⏭ loading…"; else rm -f "$SOCK"; echo "⏹ queue ended"; fi ;;
   vol|volume)
     running || { echo "⏹ nothing playing"; exit 0; }
     [ $# -gt 0 ] && ipc "{\"command\":[\"set_property\",\"volume\",$(( ${1%%.*} + 0 ))]}" >/dev/null
     ipc '{"command":["get_property","volume"]}' | sed -n 's/.*"data":\([0-9]*\).*/🔊 \1/p' ;;
   now|status)
     running || { echo "⏹ nothing playing"; exit 0; }
-    echo "▶ $(title)" ;;
+    t=$(wait_title) && echo "▶ $t" || echo "▶ loading…" ;;
   stop)
     running && ipc '{"command":["quit"]}' >/dev/null
     rm -f "$SOCK"; echo "⏹ stopped" ;;

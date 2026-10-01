@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Plugin entry point: Claude Code puts bin/ on PATH, so Claude can run `cmusic <command>`.
+exec "$(cd "$(dirname "$0")" && pwd)/../skills/music/scripts/music.sh" "$@"
