@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# claude-music — play YouTube audio in the background via mpv, controlled over mpv's IPC socket.
-# https://github.com/tungnt1203/claude-music
+# cmusic — play YouTube audio in the background via mpv, controlled over mpv's IPC socket.
+# https://github.com/tungnt1203/cmusic
 set -euo pipefail
 
-SOCK="${CLAUDE_MUSIC_SOCKET:-${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/claude-music-$(id -u).sock}"
+SOCK="${CMUSIC_SOCKET:-${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/cmusic-$(id -u).sock}"
 LOG="${SOCK%.sock}.log"
 
 usage() {
@@ -23,7 +23,7 @@ EOF
 
 # --- dependencies -------------------------------------------------------------
 
-# `install` may put a current yt-dlp here without root; prefer it over an older distro package.
+# pipx installs here; prefer it over an older distro package.
 BIN_DIR="$HOME/.local/bin"
 export PATH="$BIN_DIR:$PATH"
 
@@ -54,25 +54,6 @@ pkg_install_cmd() {
   fi
 }
 
-# Standalone yt-dlp release binary into ~/.local/bin (no root, always current).
-install_ytdlp_binary() {
-  local asset
-  case "$(uname -s)-$(uname -m)" in
-    Darwin-*) asset=yt-dlp_macos ;;
-    Linux-x86_64) asset=yt-dlp_linux ;;
-    Linux-aarch64|Linux-arm64) asset=yt-dlp_linux_aarch64 ;;
-    *) command -v python3 >/dev/null && asset=yt-dlp || return 1 ;;
-  esac
-  local url="https://github.com/yt-dlp/yt-dlp/releases/latest/download/$asset" tmp="$BIN_DIR/yt-dlp.tmp"
-  mkdir -p "$BIN_DIR"
-  echo "→ downloading $asset to $BIN_DIR/yt-dlp"
-  if command -v curl >/dev/null; then curl -fsSL "$url" -o "$tmp" 2>/dev/null
-  elif command -v wget >/dev/null; then wget -qO "$tmp" "$url"
-  else return 1; fi || { rm -f "$tmp"; return 1; }
-  chmod +x "$tmp" && mv "$tmp" "$BIN_DIR/yt-dlp" && "$BIN_DIR/yt-dlp" --version >/dev/null 2>&1 \
-    || { rm -f "$BIN_DIR/yt-dlp"; return 1; }
-}
-
 # Exit 0 when everything is installed; exit 3 with the exact command when the user must act.
 install_deps() {
   local missing; missing=$(missing_deps | xargs)
@@ -82,9 +63,10 @@ install_deps() {
     echo "→ brew install $missing"
     brew install $missing
   else
-    if [[ " $missing " == *" yt-dlp "* ]]; then
-      { command -v pipx >/dev/null && pipx install yt-dlp; } || install_ytdlp_binary \
-        || echo "  (download failed, falling back to the package manager)"
+    # pipx tracks upstream yt-dlp; distro packages can lag behind YouTube changes.
+    if [[ " $missing " == *" yt-dlp "* ]] && command -v pipx >/dev/null; then
+      echo "→ pipx install yt-dlp"
+      pipx install yt-dlp >"$LOG" 2>&1 || true
     fi
     missing=$(missing_deps | xargs)
     if [ -n "$missing" ]; then

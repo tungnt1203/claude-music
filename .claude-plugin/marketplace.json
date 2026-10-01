@@ -1,5 +1,5 @@
 {
-  "name": "claude-music",
+  "name": "cmusic",
   "owner": {
     "name": "tungnt1203"
   },
@@ -8,7 +8,7 @@
   },
   "plugins": [
     {
-      "name": "claude-music",
+      "name": "cmusic",
       "source": "./",
       "description": "Background music for Claude Code: play YouTube audio with /music, or let Claude pick songs for your mood."
     }
