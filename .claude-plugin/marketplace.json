@@ -1,0 +1,16 @@
+{
+  "name": "claude-music",
+  "owner": {
+    "name": "tungnt1203"
+  },
+  "metadata": {
+    "description": "Background music for Claude Code via YouTube + mpv"
+  },
+  "plugins": [
+    {
+      "name": "claude-music",
+      "source": "./",
+      "description": "Background music for Claude Code: play YouTube audio with /music, or let Claude pick songs for your mood."
+    }
+  ]
+}

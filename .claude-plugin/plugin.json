@@ -1,0 +1,10 @@
+{
+  "name": "claude-music",
+  "version": "0.1.0",
+  "description": "Background music for Claude Code: play YouTube audio with /music, or let Claude pick songs for your mood.",
+  "author": { "name": "tungnt1203", "url": "https://github.com/tungnt1203" },
+  "homepage": "https://github.com/tungnt1203/claude-music",
+  "repository": "https://github.com/tungnt1203/claude-music",
+  "license": "MIT",
+  "keywords": ["music", "youtube", "mpv", "yt-dlp", "skill"]
+}
