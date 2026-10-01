@@ -1,65 +1,107 @@
+<div align="center">
+
 ![cmusic](assets/logo.png)
 
 # cmusic
 
-[English](README.md)
+**Nhạc nền cho Claude Code.**<br>
+Bảo Claude mở bài nào, nhạc phát luôn trong lúc bạn code.
 
-Nghe nhạc trong lúc code với [Claude Code](https://claude.com/claude-code). Nhạc phát từ YouTube ở chế độ nền. Không cần tài khoản, không cần API key.
+[![License: MIT](https://img.shields.io/badge/license-MIT-5EEAD4)](LICENSE)
+![Platforms](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-3A1C5C)
+![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-16213E)
+
+[English](README.md) · **Tiếng Việt**
+
+</div>
+
+---
 
 ```
 > /music Nơi này có anh
 ▶ NƠI NÀY CÓ ANH | OFFICIAL MUSIC VIDEO | SƠN TÙNG M-TP
+
+> /music
+Debug lâu rồi, mình bật lo-fi cho bạn tập trung nhé.
+▶ lofi hip hop mix 📚 beats to relax/study to
+
+> qua bài khác đi, nhỏ tiếng chút
+⏭ Best of lofi hip hop 2021 ✨ [beats to relax/study to]
+🔊 40
 ```
 
-## Cài đặt
+## ✨ Tính năng
+
+- 🎧 **Phát theo tên bài.** Gõ tên bài hoặc ca sĩ là nhạc phát từ YouTube. Bạn cũng có thể dán link YouTube hoặc SoundCloud.
+- 🧠 **Claude chọn nhạc giúp bạn.** Muốn nghe gì hợp mood, hay cần nhạc để tập trung, cứ bảo Claude.
+- 📜 **Hàng đợi và điều khiển.** Thêm bài vào hàng đợi, tạm dừng, qua bài, chỉnh âm lượng, bằng lệnh hoặc nói tự nhiên.
+- 🔒 **Không cần đăng ký gì.** Không tài khoản, không API key, không lưu file nào xuống ổ cứng.
+
+## 🚀 Cài đặt
 
 ```
 /plugin marketplace add tungnt1203/cmusic
 /plugin install cmusic@cmusic
 ```
 
-Khởi động lại Claude Code. Lần đầu phát nhạc, Claude sẽ tự cài `mpv` và `yt-dlp`.
+Sau đó khởi động lại Claude Code. Lần đầu phát nhạc, Claude sẽ tự cài `mpv` và `yt-dlp`.
 
-Chạy được trên macOS và Linux (Windows thì dùng WSL).
+> [!NOTE]
+> Chạy được trên Claude Code ở **macOS** và **Linux** (Windows thì dùng WSL). Không dùng được trên claude.ai hay app điện thoại, vì ở đó không phát được tiếng ra máy tính của bạn.
 
-## Cách dùng
-
-| Lệnh | |
-|---|---|
-| `/music <tên bài>` | Phát bài, hoặc dán link YouTube / SoundCloud |
-| `/music` | Để Claude tự chọn theo mood |
-| `/music add <tên bài>` | Thêm vào hàng đợi |
-| `/music pause` · `next` · `stop` | Điều khiển phát nhạc |
-| `/music vol 40` | Chỉnh âm lượng |
-| `/music now` | Xem đang phát bài gì |
-
-Khi cài dạng plugin, tên lệnh đầy đủ là `/cmusic:music`. Cũng có thể nói tự nhiên: *"bật nhạc lo-fi đi"*, *"tắt nhạc"*.
-
-Muốn dùng lệnh ngắn `/music`? Cài dạng skill cá nhân:
+<details>
+<summary>Muốn dùng lệnh ngắn <code>/music</code>? Cài dạng skill cá nhân</summary>
 
 ```bash
 git clone https://github.com/tungnt1203/cmusic
 cp -r cmusic/skills/music ~/.claude/skills/
 ```
 
-## Plugin chạy những gì
+</details>
 
-Mọi thứ chạy trên máy bạn, thông qua một script shell duy nhất là [`skills/music/scripts/music.sh`](skills/music/scripts/music.sh).
+## 🎛️ Cách dùng
 
-- **Phát nhạc**: [`mpv`](https://mpv.io) stream tiếng từ YouTube, hoặc từ link bạn dán, thông qua [`yt-dlp`](https://github.com/yt-dlp/yt-dlp). Script điều khiển mpv qua một socket nằm trong thư mục tạm trên máy.
-- **Cài đặt** (chỉ khi máy còn thiếu tool, và chỉ khi Claude chạy `music.sh install`):
-  - macOS: `brew install mpv yt-dlp`
-  - Linux: `pipx install yt-dlp` nếu máy có pipx, còn mpv (và yt-dlp nếu không có pipx) thì cài bằng trình quản lý gói (apt, dnf, pacman, zypper hoặc apk) qua `sudo`
-- **Kết nối mạng**: chỉ tới YouTube hoặc link bạn đưa, và tới nguồn cài gói (Homebrew, PyPI, mirror của distro) khi cài đặt. Không thu thập dữ liệu sử dụng, không gửi dữ liệu đi đâu khác.
+| Lệnh | Tác dụng |
+|---|---|
+| `/music <tên bài>` | Phát bài theo tên, hoặc phát từ link |
+| `/music` | Để Claude tự chọn theo mood |
+| `/music add <tên bài>` | Thêm vào hàng đợi |
+| `/music pause` · `next` · `stop` | Điều khiển phát nhạc |
+| `/music vol 40` | Chỉnh âm lượng (0–100) |
+| `/music now` | Xem đang phát bài gì |
 
-Cần chạy Claude Code trên macOS hoặc Linux. Plugin không dùng được trên claude.ai hay app điện thoại, vì ở đó không phát được tiếng ra máy tính của bạn.
+Khi cài dạng plugin, lệnh sẽ là `/cmusic:music`. Cũng có thể nói tự nhiên: *"bật nhạc lo-fi đi"*, *"tắt nhạc"*.
 
-## Hỏi đáp
+## 🔍 Plugin chạy những gì
 
-**Có tải nhạc về máy không?** Không. Nhạc chỉ stream qua RAM, không lưu file nào xuống ổ cứng.
+Mọi thứ chạy trên máy bạn, qua một script shell duy nhất: [`skills/music/scripts/music.sh`](skills/music/scripts/music.sh).
 
-**Bài không phát được?** YouTube hay thay đổi, nên update yt-dlp: `brew upgrade yt-dlp` (macOS) hoặc `pipx upgrade yt-dlp` (Linux).
+| | |
+|---|---|
+| **Phát nhạc** | [`mpv`](https://mpv.io) stream tiếng thông qua [`yt-dlp`](https://github.com/yt-dlp/yt-dlp), và được điều khiển qua một socket nằm trong thư mục tạm trên máy |
+| **Cài đặt** | Chỉ chạy khi máy còn thiếu tool. macOS: `brew install mpv yt-dlp`. Linux: `pipx install yt-dlp` nếu máy có pipx, còn mpv (và yt-dlp nếu không có pipx) thì cài từ apt, dnf, pacman, zypper hoặc apk qua `sudo` |
+| **Kết nối mạng** | Chỉ tới YouTube hoặc link bạn đưa, và tới nguồn cài gói (Homebrew, PyPI, mirror của distro) khi cài đặt. Không thu thập dữ liệu sử dụng |
 
-## License
+## ❓ Hỏi đáp
 
-MIT. Đây là dự án cộng đồng, không liên kết với Anthropic.
+<details>
+<summary><b>Có tải nhạc về máy không?</b></summary>
+
+Không. Nhạc chỉ stream qua RAM, không lưu file nào xuống ổ cứng.
+
+</details>
+
+<details>
+<summary><b>Bài không phát được?</b></summary>
+
+YouTube hay thay đổi, nên update yt-dlp: `brew upgrade yt-dlp` trên macOS, hoặc `pipx upgrade yt-dlp` trên Linux.
+
+</details>
+
+---
+
+<div align="center">
+
+MIT License · Dự án cộng đồng, không liên kết với Anthropic
+
+</div>
