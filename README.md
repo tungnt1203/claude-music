@@ -102,6 +102,7 @@ YouTube changes often, so update yt-dlp: `brew upgrade yt-dlp` on macOS, or `pip
 
 <div align="center">
 
-MIT License · A community project, not affiliated with Anthropic
+MIT License · [Privacy](PRIVACY.md) · [Support](https://github.com/tungnt1203/cmusic/issues) · tung.nguyen120301@gmail.com<br>
+A community project, not affiliated with Anthropic
 
 </div>

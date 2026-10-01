@@ -4,6 +4,7 @@
   "description": "Background music for Claude Code: play YouTube audio with /music, or let Claude pick songs for your mood.",
   "author": {
     "name": "tungnt1203",
+    "email": "tung.nguyen120301@gmail.com",
     "url": "https://github.com/tungnt1203"
   },
   "homepage": "https://github.com/tungnt1203/cmusic",

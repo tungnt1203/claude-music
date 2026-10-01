@@ -102,6 +102,7 @@ YouTube hay thay đổi, nên update yt-dlp: `brew upgrade yt-dlp` trên macOS, 
 
 <div align="center">
 
-MIT License · Dự án cộng đồng, không liên kết với Anthropic
+MIT License · [Quyền riêng tư](PRIVACY.md) · [Hỗ trợ](https://github.com/tungnt1203/cmusic/issues) · tung.nguyen120301@gmail.com<br>
+Dự án cộng đồng, không liên kết với Anthropic
 
 </div>
