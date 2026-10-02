@@ -211,6 +211,10 @@ local NOISE = { "official music video", "official lyric video", "official video"
                 "music video", "lyric video", "lyrics", "lyric", "visualizer", "audio", "mv", "m/v", "4k", "hd",
                 "remastered", "remaster" }
 local function clean_title(t)
+    -- Some titles arrive decomposed (NFD: a letter, then its accents as combining marks
+    -- U+0300–U+036F), which lrclib's search can't match. Lua can't recompose them, but
+    -- lrclib matches unaccented text fine, so drop the marks. Composed (NFC) text has none.
+    t = t:gsub("\204[\128-\191]", ""):gsub("\205[\128-\175]", "")
     t = " " .. t:gsub("%b()", " "):gsub("%b[]", " "):gsub("【.-】", " "):gsub("[|/｜]", " ") .. " "
     for _, w in ipairs(NOISE) do t = t:gsub("%f[%w]" .. ci(w):gsub("/", "%%/"):gsub(" ", "%%s+") .. "%f[%W]", " ") end
     return (t:gsub(" %- ", " "):gsub("%s+", " "):gsub("^ ", ""):gsub(" $", ""))
@@ -251,16 +255,53 @@ local function show(entry)
     mp.observe_property("time-pos", "number", line_observer)
 end
 
--- Best result: synced lyrics first, then the duration closest to this track's.
-local function pick(results, duration)
+-- Best result: synced lyrics first, then lrclib's own ranking, a song whose name is in the
+-- title, and only then the closest duration (a music video runs longer than the song, so
+-- duration alone picks the wrong song).
+local function pick(results, duration, query)
     local best, best_score
-    for _, r in ipairs(results or {}) do
+    query = query:lower()
+    for i, r in ipairs(results or {}) do
         if r.syncedLyrics or r.plainLyrics then
-            local score = math.abs((tonumber(r.duration) or 0) - (duration or 0)) + (r.syncedLyrics and 0 or 1000)
+            local name = (r.trackName or ""):lower()
+            local score = (r.syncedLyrics and 0 or 1000) + i * 10
+                + (name ~= "" and query:find(name, 1, true) and -30 or 0)
+                + math.min(60, math.abs((tonumber(r.duration) or 0) - (duration or 0)))
             if not best or score < best_score then best, best_score = r, score end
         end
     end
     return best
+end
+
+-- Search queries from most to least specific: the whole cleaned title, then its first and
+-- last "|" segments (usually song and artist), then the first alone.
+local function queries_for(title)
+    local segs = {}
+    for seg in title:gmatch("[^|｜]+") do
+        seg = clean_title(seg)
+        if #seg > 1 then segs[#segs + 1] = seg end
+    end
+    local list, seen = {}, {}
+    local function add(q) if q and q ~= "" and not seen[q] then seen[q] = true; list[#list + 1] = q end end
+    add(clean_title(title))
+    if #segs > 1 then add(segs[1] .. " " .. segs[#segs]) end
+    add(segs[1])
+    return list
+end
+
+local function lyrics_entry(best, query)
+    if not best then return { status = "none", text = query } end
+    local entry = { status = "ok", synced = best.syncedLyrics and parse_lrc(best.syncedLyrics) }
+    local plain = best.plainLyrics
+    if not plain and entry.synced then
+        local t = {}
+        for _, l in ipairs(entry.synced) do t[#t + 1] = l.text end
+        plain = table.concat(t, "\n")
+    end
+    local name, artist = best.trackName or "", best.artistName or ""
+    local head = name:find(artist, 1, true) and name or (name .. " — " .. artist)
+    entry.text = head .. "\n\n" .. (plain or "")
+    return entry
 end
 
 mp.register_script_message("cmusic-lyrics", function()
@@ -268,32 +309,24 @@ mp.register_script_message("cmusic-lyrics", function()
     if lyrics_cache[path] then return show(lyrics_cache[path]) end
     stop_line_observer()
     publish("lyrics-status", "loading")
-    local query, duration = clean_title(mp.get_property("media-title", "")), mp.get_property_number("duration")
-    mp.command_native_async({
-        name = "subprocess", capture_stdout = true, playback_only = false,
-        args = { "curl", "-sfG", "--max-time", "10", "-A", "cmusic (https://github.com/tungnt1203/cmusic)",
-                 "https://lrclib.net/api/search", "--data-urlencode", "q=" .. query },
-    }, function(_, r)
-        if mp.get_property("path") ~= path then return end -- the track changed meanwhile
-        if not r or r.status ~= 0 then return publish("lyrics-status", "error") end
-        local best = pick(utils.parse_json(r.stdout or ""), duration)
-        local entry = { status = "none", text = query }
-        if best then
-            entry.status = "ok"
-            entry.synced = best.syncedLyrics and parse_lrc(best.syncedLyrics)
-            local plain = best.plainLyrics
-            if not plain and entry.synced then
-                local t = {}
-                for _, l in ipairs(entry.synced) do t[#t + 1] = l.text end
-                plain = table.concat(t, "\n")
-            end
-            local name, artist = best.trackName or "", best.artistName or ""
-            local head = name:find(artist, 1, true) and name or (name .. " — " .. artist)
-            entry.text = head .. "\n\n" .. (plain or "")
-        end
-        lyrics_cache[path] = entry
-        show(entry)
-    end)
+    local queries, duration = queries_for(mp.get_property("media-title", "")), mp.get_property_number("duration")
+
+    local function try(i)
+        mp.command_native_async({
+            name = "subprocess", capture_stdout = true, playback_only = false,
+            args = { "curl", "-sfG", "--max-time", "10", "-A", "cmusic (https://github.com/tungnt1203/cmusic)",
+                     "https://lrclib.net/api/search", "--data-urlencode", "q=" .. queries[i] },
+        }, function(_, r)
+            if mp.get_property("path") ~= path then return end -- the track changed meanwhile
+            if not r or r.status ~= 0 then return publish("lyrics-status", "error") end
+            local best = pick(utils.parse_json(r.stdout or ""), duration, queries[i])
+            if not best and queries[i + 1] then return try(i + 1) end
+            local entry = lyrics_entry(best, queries[1])
+            if entry.status == "ok" then lyrics_cache[path] = entry end -- "none" may be a blip: retry later
+            show(entry)
+        end)
+    end
+    try(1)
 end)
 
 mp.register_event("start-file", function()
