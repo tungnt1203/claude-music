@@ -72,6 +72,7 @@ cp -r cmusic/skills/music ~/.claude/skills/
 | `/music seek +30` · `seek 1:30` · `replay` | Jump within the track |
 | `/music vol 40` | Set the volume (0–100) |
 | `/music now` | Show what's playing |
+| `/music lyrics` | Show the lyrics, from [lrclib.net](https://lrclib.net) |
 | `/music focus 25` | Pomodoro: 25 min of focus music, a notification, then a 5 min break (`focus 50 break 10`) |
 | `/music stop in 30m` | Sleep timer, with a gentle fade-out (`stop after this` waits for the song to end) |
 
@@ -117,7 +118,7 @@ Everything happens on your machine, through one shell script, [`skills/music/scr
 |---|---|
 | **Playback** | [`mpv`](https://mpv.io) streams audio using [`yt-dlp`](https://github.com/yt-dlp/yt-dlp), and is controlled through a local socket in your temp folder |
 | **Install** | Runs only when a tool is missing. macOS: `brew install mpv yt-dlp`. Linux: `pipx install yt-dlp` if pipx is available, and mpv (plus yt-dlp otherwise) from apt, dnf, pacman, zypper or apk through `sudo` |
-| **Network** | Connects only to YouTube or the link you gave, plus your package sources (Homebrew, PyPI, distro mirrors) when installing. No telemetry |
+| **Network** | Connects only to YouTube or the link you gave, [lrclib.net](https://lrclib.net) when you ask for lyrics, plus your package sources (Homebrew, PyPI, distro mirrors) when installing. No telemetry |
 
 ## ❓ FAQ
 

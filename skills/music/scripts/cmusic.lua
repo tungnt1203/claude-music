@@ -1,5 +1,5 @@
 -- cmusic.lua — loaded into mpv by music.sh (--script). Runs the parts that must outlive the
--- shell command: fades, timers, radio, ducking and the end-of-task swell. music.sh talks to it with `script-message cmusic-*`
+-- shell command: fades, timers, radio, ducking, the end-of-task swell and lyrics. music.sh talks to it with `script-message cmusic-*`
 -- and reads its state from `user-data/cmusic/*`.
 
 local FADE_IN, FADE_OUT, FADE_SLEEP = 1.5, 1.0, 10
@@ -196,6 +196,106 @@ mp.register_script_message("cmusic-radio", function(on)
     radio = on == "on"
     publish("radio", radio and "on" or "off")
     refill()
+end)
+
+-- Lyrics --------------------------------------------------------------------------------
+-- `lyrics`: look the current track up on lrclib.net (free, no key). Publishes
+-- lyrics-status (loading|ok|none|error), lyrics (plain text) and, for synced lyrics,
+-- lyrics-line (the line being sung).
+local utils = require "mp.utils"
+local lyrics_cache, synced, line_observer = {}, nil, nil
+
+-- "NƠI NÀY CÓ ANH | OFFICIAL MUSIC VIDEO | SƠN TÙNG M-TP" -> "NƠI NÀY CÓ ANH SƠN TÙNG M-TP"
+local function ci(word) return (word:gsub("%a", function(c) return "[" .. c:lower() .. c:upper() .. "]" end)) end
+local NOISE = { "official music video", "official lyric video", "official video", "official audio", "official mv",
+                "music video", "lyric video", "lyrics", "lyric", "visualizer", "audio", "mv", "m/v", "4k", "hd",
+                "remastered", "remaster" }
+local function clean_title(t)
+    t = " " .. t:gsub("%b()", " "):gsub("%b[]", " "):gsub("【.-】", " "):gsub("[|/｜]", " ") .. " "
+    for _, w in ipairs(NOISE) do t = t:gsub("%f[%w]" .. ci(w):gsub("/", "%%/"):gsub(" ", "%%s+") .. "%f[%W]", " ") end
+    return (t:gsub(" %- ", " "):gsub("%s+", " "):gsub("^ ", ""):gsub(" $", ""))
+end
+
+local function parse_lrc(lrc)
+    local lines = {}
+    for line in lrc:gmatch("[^\n]+") do
+        local m, sec, text = line:match("^%[(%d+):(%d+%.?%d*)%]%s*(.*)$")
+        if m then lines[#lines + 1] = { t = tonumber(m) * 60 + tonumber(sec), text = text } end
+    end
+    return #lines > 0 and lines or nil
+end
+
+local function stop_line_observer()
+    if line_observer then mp.unobserve_property(line_observer); line_observer = nil end
+    synced = nil
+    publish("lyrics-line", "")
+end
+
+local function show(entry)
+    stop_line_observer()
+    publish("lyrics", entry.text or "")
+    publish("lyrics-status", entry.status)
+    synced = entry.synced
+    if not synced then return end
+    local current
+    line_observer = function(_, pos)
+        if not pos then return end
+        local text = ""
+        for _, l in ipairs(synced) do if l.t <= pos + 0.3 then text = l.text else break end end
+        if text ~= current then current = text; publish("lyrics-line", text) end
+    end
+    mp.observe_property("time-pos", "number", line_observer)
+end
+
+-- Best result: synced lyrics first, then the duration closest to this track's.
+local function pick(results, duration)
+    local best, best_score
+    for _, r in ipairs(results or {}) do
+        if r.syncedLyrics or r.plainLyrics then
+            local score = math.abs((tonumber(r.duration) or 0) - (duration or 0)) + (r.syncedLyrics and 0 or 1000)
+            if not best or score < best_score then best, best_score = r, score end
+        end
+    end
+    return best
+end
+
+mp.register_script_message("cmusic-lyrics", function()
+    local path = mp.get_property("path")
+    if lyrics_cache[path] then return show(lyrics_cache[path]) end
+    stop_line_observer()
+    publish("lyrics-status", "loading")
+    local query, duration = clean_title(mp.get_property("media-title", "")), mp.get_property_number("duration")
+    mp.command_native_async({
+        name = "subprocess", capture_stdout = true, playback_only = false,
+        args = { "curl", "-sfG", "--max-time", "10", "-A", "cmusic (https://github.com/tungnt1203/cmusic)",
+                 "https://lrclib.net/api/search", "--data-urlencode", "q=" .. query },
+    }, function(_, r)
+        if mp.get_property("path") ~= path then return end -- the track changed meanwhile
+        if not r or r.status ~= 0 then return publish("lyrics-status", "error") end
+        local best = pick(utils.parse_json(r.stdout or ""), duration)
+        local entry = { status = "none", text = query }
+        if best then
+            entry.status = "ok"
+            entry.synced = best.syncedLyrics and parse_lrc(best.syncedLyrics)
+            local plain = best.plainLyrics
+            if not plain and entry.synced then
+                local t = {}
+                for _, l in ipairs(entry.synced) do t[#t + 1] = l.text end
+                plain = table.concat(t, "\n")
+            end
+            local name, artist = best.trackName or "", best.artistName or ""
+            local head = name:find(artist, 1, true) and name or (name .. " — " .. artist)
+            entry.text = head .. "\n\n" .. (plain or "")
+        end
+        lyrics_cache[path] = entry
+        show(entry)
+    end)
+end)
+
+mp.register_event("start-file", function()
+    stop_line_observer()
+    publish("lyrics-status", "")
+    publish("lyrics", "")
 end)
 
 publish("radio", radio and "on" or "off")

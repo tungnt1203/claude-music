@@ -23,6 +23,7 @@ Control playback with the `cmusic` command. It is on PATH when cmusic is install
 | play this one again from the start | `cmusic replay` |
 | volume | `cmusic vol 50` (no number prints the current volume) |
 | what's playing | `cmusic now` |
+| lyrics / what are they singing | `cmusic lyrics` · `lyrics --line` (just the current line) |
 | stop | `cmusic stop` |
 | sleep timer / stop when this song ends / cancel it | `cmusic stop in 30m` · `stop after this` · `stop cancel` |
 | show the track in Claude Code's statusline | `cmusic statusline` (see Notes) |
@@ -48,4 +49,5 @@ For `/music` with no argument, or requests like "put something on", "music to fo
 - On failure, the error output points to the mpv log file.
 - `focus` plays focus music, fades out when time is up, sends a desktop notification and plays upbeat music for the break, then stops. `now` shows the time left (🍅 focus, ☕ break). `stop` ends it early.
 - Audio cues (plugin hooks, opt-in): to dip the music while Claude waits for the user, set `"CMUSIC_DUCK": "1"`; for a short swell when a long task (60s+) finishes, set `"CMUSIC_CELEBRATE": "1"`. Both go in the `env` object of `~/.claude/settings.json` (merge with any existing `env`) and apply after a restart.
+- `lyrics` output can be long: show it as is, without commentary. If none are found, say so in one line.
 - Statusline: `cmusic statusline` prints the `statusLine` setting to add to `~/.claude/settings.json`. If the user already has a `statusLine`, don't replace it: append the output of the `now --line` command to their existing script, or ask.

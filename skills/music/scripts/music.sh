@@ -27,6 +27,7 @@ usage: music.sh <command> [args]
   stop in <30m|1h>   sleep timer; also: stop after this (end of track), stop cancel
   radio [on|off]     keep playing related songs when the queue runs out
   radio <query|url>  start a radio from a song
+  lyrics [--line]    lyrics of the current track from lrclib.net (--line: the line being sung)
   focus [min] [break <min>] [query]
                      Pomodoro: focus music for 25 min, then a 5 min break
   hook <event>       for Claude Code hooks (notify, prompt, tool, stop);
@@ -152,20 +153,24 @@ to_secs() { awk -F: '{ s = 0; for (i = 1; i <= NF; i++) s = s * 60 + $i; print s
 
 json_escape() { local s=${1//\\/\\\\}; s=${s//\"/\\\"}; s=${s//$'\n'/\\n}; printf '%s' "${s//$'\t'/\\t}"; }
 
-# Print "<url>\t<title>". URLs pass through (titled by the URL itself). Queries resolve to the
+# Print "<url>\t<title>". URLs pass through untitled (mpv names them once they load). Queries resolve to the
 # first *video* result: the top hit is often a channel (e.g. an artist name), which mpv would
 # expand into hundreds of queued videos.
 source_for() {
-  case "$1" in http://*|https://*) printf '%s\t%s\n' "$1" "$1"; return ;; esac
+  case "$1" in http://*|https://*) printf '%s\t\n' "$1"; return ;; esac
   local hit
   hit=$(yt-dlp --no-warnings --flat-playlist --print "%(ie_key)s %(url)s %(title)s" "ytsearch5:$1" 2>/dev/null \
     | awk '$1 == "Youtube" { url = $2; sub(/^[^ ]+ [^ ]+ /, ""); print url "\t" $0; exit }') || true
   if [ -n "$hit" ]; then echo "$hit"; else printf 'ytdl://ytsearch1:%s\t%s\n' "$1" "$1"; fi
 }
 
-# Queue a source with its title, so `queue` can name tracks before they load.
+# Queue a source with its title, so `queue` can name tracks before they load. Prints the title.
 append() {
   local src; src=$(source_for "$1")
+  if [ -z "${src#*$'\t'}" ]; then
+    ipc "{\"command\":[\"loadfile\",\"$(json_escape "${src%%$'\t'*}")\",\"append-play\"]}" >/dev/null
+    echo "$1"; return
+  fi
   ipc "{\"command\":[\"loadlist\",\"$(json_escape "memory://#EXTM3U
 #EXTINF:0,${src#*$'\t'}
 ${src%%$'\t'*}")\",\"append-play\"]}" >/dev/null
@@ -354,6 +359,24 @@ case "$cmd" in
       *) need_deps
         start "$*" "$(source_for "$*" | cut -f1)" --script-opts=cmusic-radio=yes
         echo "📻 radio on: related songs will keep playing" ;;
+    esac ;;
+  lyrics)
+    running || { echo "⏹ nothing playing"; exit 0; }
+    lua_ready || { echo "✗ lyrics need mpv >= 0.36 with Lua (see: doctor)" >&2; exit 1; }
+    wait_title >/dev/null || { echo "▶ still loading, try again in a few seconds"; exit 0; }
+    ipc '{"command":["script-message","cmusic-lyrics"]}' >/dev/null
+    for _ in $(seq 1 60); do
+      st=$(expand '${user-data/cmusic/lyrics-status:}')
+      case "$st" in ok|none|error) break ;; esac
+      sleep 0.25
+    done
+    case "$st" in
+      ok) if [ "${1:-}" = --line ]; then
+            l=$(expand '${user-data/cmusic/lyrics-line:}'); echo "🎤 ${l:-…}"
+          else echo "🎤 $(expand '${user-data/cmusic/lyrics}')"; fi ;;
+      none) echo "✗ no lyrics found on lrclib.net for: $(expand '${user-data/cmusic/lyrics}')" ;;
+      error) echo "✗ couldn't reach lrclib.net" >&2; exit 1 ;;
+      *) echo "✗ lrclib.net is slow to answer, try again" >&2; exit 1 ;;
     esac ;;
   focus|pomodoro)
     need_deps

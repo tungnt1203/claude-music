@@ -1,6 +1,6 @@
 # Privacy Policy
 
-_Last updated: October 1, 2026_
+_Last updated: October 2, 2026_
 
 cmusic is a Claude Code plugin that plays music on your computer. This policy explains what data it handles.
 
@@ -13,6 +13,7 @@ The developer collects **no data**. cmusic has no server, no analytics and no te
 | Data | Sent to | Why |
 |---|---|---|
 | The song name you ask for, or the link you paste | YouTube, or the site the link points to, through [yt-dlp](https://github.com/yt-dlp/yt-dlp) | To find and stream the audio |
+| The current track's title, cleaned up | [lrclib.net](https://lrclib.net), only when you ask for lyrics | To find the lyrics |
 | Standard package-manager requests | Homebrew, PyPI or your Linux distribution's mirrors | Only when Claude installs `mpv` or `yt-dlp` for you |
 
 Those services process the requests under their own privacy policies, for example the [Google Privacy Policy](https://policies.google.com/privacy) for YouTube. Nothing is sent to the developer.

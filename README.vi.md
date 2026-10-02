@@ -72,6 +72,7 @@ cp -r cmusic/skills/music ~/.claude/skills/
 | `/music seek +30` · `seek 1:30` · `replay` | Tua trong bài |
 | `/music vol 40` | Chỉnh âm lượng (0–100) |
 | `/music now` | Xem đang phát bài gì |
+| `/music lyrics` | Xem lời bài hát, lấy từ [lrclib.net](https://lrclib.net) |
 | `/music focus 25` | Pomodoro: 25 phút nhạc tập trung, có thông báo, rồi nghỉ 5 phút (`focus 50 break 10`) |
 | `/music stop in 30m` | Hẹn giờ tắt nhạc, nhỏ dần rồi tắt (`stop after this`: tắt khi hết bài) |
 
@@ -117,7 +118,7 @@ Mọi thứ chạy trên máy bạn, qua một script shell, [`skills/music/scri
 |---|---|
 | **Phát nhạc** | [`mpv`](https://mpv.io) stream tiếng thông qua [`yt-dlp`](https://github.com/yt-dlp/yt-dlp), và được điều khiển qua một socket nằm trong thư mục tạm trên máy |
 | **Cài đặt** | Chỉ chạy khi máy còn thiếu tool. macOS: `brew install mpv yt-dlp`. Linux: `pipx install yt-dlp` nếu máy có pipx, còn mpv (và yt-dlp nếu không có pipx) thì cài từ apt, dnf, pacman, zypper hoặc apk qua `sudo` |
-| **Kết nối mạng** | Chỉ tới YouTube hoặc link bạn đưa, và tới nguồn cài gói (Homebrew, PyPI, mirror của distro) khi cài đặt. Không thu thập dữ liệu sử dụng |
+| **Kết nối mạng** | Chỉ tới YouTube hoặc link bạn đưa, [lrclib.net](https://lrclib.net) khi bạn xem lời bài hát, và tới nguồn cài gói (Homebrew, PyPI, mirror của distro) khi cài đặt. Không thu thập dữ liệu sử dụng |
 
 ## ❓ Hỏi đáp
 
