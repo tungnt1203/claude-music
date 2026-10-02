@@ -35,7 +35,7 @@ Debug lâu rồi, mình bật lo-fi cho bạn tập trung nhé.
 - 🎧 **Phát theo tên bài.** Gõ tên bài hoặc ca sĩ là nhạc phát từ YouTube. Bạn cũng có thể dán link YouTube hoặc SoundCloud.
 - 🧠 **Claude chọn nhạc giúp bạn.** Muốn nghe gì hợp mood, hay cần nhạc để tập trung, cứ bảo Claude.
 - 📜 **Hàng đợi và điều khiển.** Thêm bài vào hàng đợi, tạm dừng, qua bài, chỉnh âm lượng, bằng lệnh hoặc nói tự nhiên.
-- 🔒 **Không cần đăng ký gì.** Không tài khoản, không API key, không lưu file nào xuống ổ cứng.
+- 🔒 **Không cần đăng ký gì.** Không tài khoản, không API key. Không lưu gì xuống ổ cứng trừ khi bạn yêu cầu (bài yêu thích, playlist, lịch sử nếu bật).
 
 ## 🚀 Cài đặt
 
@@ -74,6 +74,8 @@ cp -r cmusic/skills/music ~/.claude/skills/
 | `/music now` | Xem đang phát bài gì |
 | `/music lyrics` | Xem lời bài hát, lấy từ [lrclib.net](https://lrclib.net) |
 | `/music focus 25` | Pomodoro: 25 phút nhạc tập trung, có thông báo, rồi nghỉ 5 phút (`focus 50 break 10`) |
+| `/music fav` · `favs` | Thích bài đang phát · phát các bài đã thích, ngẫu nhiên |
+| `/music save <tên>` · `load <tên>` | Lưu hàng đợi thành playlist · phát lại |
 | `/music stop in 30m` | Hẹn giờ tắt nhạc, nhỏ dần rồi tắt (`stop after this`: tắt khi hết bài) |
 
 <details>
@@ -125,7 +127,7 @@ Mọi thứ chạy trên máy bạn, qua một script shell, [`skills/music/scri
 <details>
 <summary><b>Có tải nhạc về máy không?</b></summary>
 
-Không. Nhạc chỉ stream qua RAM, không lưu file nào xuống ổ cứng.
+Không. Nhạc chỉ stream qua RAM. Thứ duy nhất cmusic ghi xuống là bài yêu thích, playlist đã lưu và (nếu bạn bật bằng `CMUSIC_HISTORY=1`) danh sách bài đã nghe: chỉ tên bài và link, trong `~/.local/share/cmusic/`. `/music forget` xóa hết.
 
 </details>
 

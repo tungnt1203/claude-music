@@ -4,6 +4,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Only favorites, saved playlists and opt-in history (CMUSIC_HISTORY=1) are written here.
+DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/cmusic"
 SOCK="${CMUSIC_SOCKET:-${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/cmusic-$(id -u).sock}"
 LOG="${SOCK%.sock}.log"
 
@@ -30,6 +32,12 @@ usage: music.sh <command> [args]
   lyrics [--line]    lyrics of the current track from lrclib.net (--line: the line being sung)
   focus [min] [break <min>] [query]
                      Pomodoro: focus music for 25 min, then a 5 min break
+  fav / unfav        save / remove the current track in your favorites
+  favs               play your favorites, shuffled
+  save <name>        save the queue as a named playlist
+  load <name>        play a saved playlist; playlists lists them
+  history [n]        recently played (opt-in: CMUSIC_HISTORY=1)
+  forget             delete favorites, playlists and history
   hook <event>       for Claude Code hooks (notify, prompt, tool, stop);
                      opt-in via CMUSIC_DUCK=1 and CMUSIC_CELEBRATE=1
   doctor             check dependencies
@@ -224,6 +232,9 @@ start() {
     ipc '{"command":["quit"]}' >/dev/null; sleep 0.5
   fi
   rm -f "$SOCK"
+  if [ "${CMUSIC_HISTORY:-0}" = 1 ]; then
+    mkdir -p "$DATA_DIR"; set -- "$@" --script-opts-append=cmusic-history="$DATA_DIR/history.tsv"
+  fi
   nohup mpv --no-video --no-terminal --input-ipc-server="$SOCK" --script="$SCRIPT_DIR/cmusic.lua" \
     --volume="${vol:-100}" --ytdl-format=bestaudio/best "$@" "$src" >"$LOG" 2>&1 &
   local t
@@ -231,6 +242,24 @@ start() {
   elif running; then echo "▶ loading: $label (run 'now' in a few seconds)"
   else echo "✗ playback failed — see $LOG" >&2; tail -5 "$LOG" >&2; exit 1; fi
 }
+
+# Write the queue as "<url>\t<title>" lines (the current track by its loaded title).
+queue_tsv() {
+  local n count pos tpl="" i
+  n=$(expand '${playlist-count}|${playlist-pos}'); count=${n%|*}; pos=${n#*|}
+  for (( i = 0; i < count; i++ )); do tpl+="\${playlist/$i/filename}"$'\t'"\${playlist/$i/title:}"$'\n'; done
+  i=0
+  expand "${tpl%$'\n'}" | while IFS=$'\t' read -r url t; do
+    [ "$i" = "$pos" ] && t=$(title)
+    printf '%s\t%s\n' "$url" "${t:-$url}"; i=$(( i + 1 ))
+  done
+}
+
+# "<url>\t<title>" lines -> m3u
+to_m3u() { echo "#EXTM3U"; while IFS=$'\t' read -r url t; do printf '#EXTINF:0,%s\n%s\n' "$t" "$url"; done; }
+
+# Tell the user once where their data lives.
+first_write() { [ -e "$DATA_DIR" ] || { mkdir -p "$DATA_DIR"; echo "  (saved on disk in $DATA_DIR; 'forget' deletes it)"; }; }
 
 # --- commands -----------------------------------------------------------------
 
@@ -357,7 +386,7 @@ case "$cmd" in
         lua_ready || { echo "✗ radio needs mpv >= 0.36 with Lua (see: doctor)" >&2; exit 1; }
         ipc "{\"command\":[\"script-message\",\"cmusic-radio\",\"$1\"]}" >/dev/null; echo "📻 radio $1" ;;
       *) need_deps
-        start "$*" "$(source_for "$*" | cut -f1)" --script-opts=cmusic-radio=yes
+        start "$*" "$(source_for "$*" | cut -f1)" --script-opts-append=cmusic-radio=yes
         echo "📻 radio on: related songs will keep playing" ;;
     esac ;;
   lyrics)
@@ -404,6 +433,55 @@ Add to ~/.claude/settings.json:
 Already have a statusline? Append the output of: $cmd
 EOF
     ;;
+  fav|favorite|like)
+    running || { echo "⏹ nothing playing"; exit 0; }
+    t=$(wait_title) || { echo "▶ still loading, try again in a few seconds"; exit 0; }
+    url=$(expand '${path}'); f="$DATA_DIR/favorites.m3u"
+    if [ -f "$f" ] && grep -qxF -- "$url" "$f"; then echo "♥ already a favorite: $t"; exit 0; fi
+    note=$(first_write)
+    [ -f "$f" ] || echo "#EXTM3U" >"$f"
+    printf '#EXTINF:0,%s\n%s\n' "$t" "$url" >>"$f"
+    echo "♥ $t"; [ -z "$note" ] || echo "$note" ;;
+  unfav|unlike)
+    running || { echo "⏹ nothing playing"; exit 0; }
+    url=$(expand '${path}'); f="$DATA_DIR/favorites.m3u"
+    [ -f "$f" ] && grep -qxF -- "$url" "$f" || { echo "not a favorite"; exit 0; }
+    # Drop the URL line and the #EXTINF line just before it.
+    awk -v u="$url" '{ l[NR] = $0 } $0 == u { drop[NR] = drop[NR - 1] = 1 } END { for (i = 1; i <= NR; i++) if (!drop[i]) print l[i] }' "$f" >"$f.tmp" && mv "$f.tmp" "$f"
+    echo "♡ removed: $(title)" ;;
+  favs|favorites)
+    f="$DATA_DIR/favorites.m3u"
+    [ -f "$f" ] && grep -qv '^#' "$f" || { echo "no favorites yet: say 'fav' while a song you like is playing"; exit 0; }
+    need_deps
+    start "favorites" "$f" --shuffle
+    echo "♥ $(grep -cv '^#' "$f") favorites, shuffled" ;;
+  save)
+    running || { echo "⏹ nothing playing"; exit 0; }
+    name=$(printf '%s' "$*" | tr -c 'A-Za-z0-9 _-' '_'); [ -n "$name" ] || { echo "usage: save <name>" >&2; exit 1; }
+    note=$(first_write); mkdir -p "$DATA_DIR/playlists"
+    queue_tsv | to_m3u >"$DATA_DIR/playlists/$name.m3u"
+    echo "💾 saved \"$name\" ($(grep -cv '^#' "$DATA_DIR/playlists/$name.m3u") tracks)"; [ -z "$note" ] || echo "$note" ;;
+  load)
+    name=$(printf '%s' "$*" | tr -c 'A-Za-z0-9 _-' '_'); f="$DATA_DIR/playlists/$name.m3u"
+    [ -f "$f" ] || { echo "✗ no playlist \"$*\". Saved: $(ls "$DATA_DIR/playlists" 2>/dev/null | sed 's/\.m3u$//' | paste -sd, - | sed 's/,/, /g')" >&2; exit 1; }
+    need_deps
+    start "$name" "$f" ;;
+  playlists)
+    ls "$DATA_DIR/playlists"/*.m3u >/dev/null 2>&1 || { echo "no saved playlists: 'save <name>' saves the queue"; exit 0; }
+    for f in "$DATA_DIR/playlists"/*.m3u; do n=$(basename "$f" .m3u); echo "  $n ($(grep -cv '^#' "$f") tracks)"; done ;;
+  history)
+    f="$DATA_DIR/history.tsv"
+    if [ ! -s "$f" ]; then
+      if [ "${CMUSIC_HISTORY:-0}" = 1 ]; then echo "nothing played yet"
+      else echo "history is off; to turn it on, set CMUSIC_HISTORY=1 (it's saved in $DATA_DIR)"; fi
+      exit 0
+    fi
+    # Keep the file bounded.
+    [ "$(wc -l <"$f")" -gt 1000 ] && { tail -500 "$f" >"$f.tmp" && mv "$f.tmp" "$f"; }
+    tail -"${1:-20}" "$f" | awk -F'\t' '{ l[NR] = "  " $1 "  " $2 } END { for (i = NR; i >= 1; i--) print l[i] }' ;;
+  forget)
+    if [ -e "$DATA_DIR" ]; then rm -rf "$DATA_DIR"; echo "🗑 deleted $DATA_DIR (favorites, playlists, history)"
+    else echo "nothing saved"; fi ;;
   hook)
     # Runs on every Notification / UserPromptSubmit / PostToolUse / Stop, so bail out fast.
     duck=${CMUSIC_DUCK:-0} cheer=${CMUSIC_CELEBRATE:-0}

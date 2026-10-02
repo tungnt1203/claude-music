@@ -1,5 +1,5 @@
 -- cmusic.lua — loaded into mpv by music.sh (--script). Runs the parts that must outlive the
--- shell command: fades, timers, radio, ducking, the end-of-task swell and lyrics. music.sh talks to it with `script-message cmusic-*`
+-- shell command: fades, timers, radio, ducking, the end-of-task swell, lyrics and history. music.sh talks to it with `script-message cmusic-*`
 -- and reads its state from `user-data/cmusic/*`.
 
 local FADE_IN, FADE_OUT, FADE_SLEEP = 1.5, 1.0, 10
@@ -297,6 +297,18 @@ mp.register_event("start-file", function()
     publish("lyrics-status", "")
     publish("lyrics", "")
 end)
+
+-- History (opt-in: music.sh passes the file only when CMUSIC_HISTORY=1) --------------------
+local history_file = mp.get_opt("cmusic-history")
+if history_file and history_file ~= "" then
+    mp.register_event("file-loaded", function()
+        local f = io.open(history_file, "a")
+        if not f then return end
+        local title = mp.get_property("media-title", ""):gsub("[\t\n]", " ")
+        f:write(os.date("%Y-%m-%d %H:%M"), "\t", title, "\t", mp.get_property("path", ""), "\n")
+        f:close()
+    end)
+end
 
 publish("radio", radio and "on" or "off")
 set_level(level)

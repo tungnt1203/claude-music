@@ -28,6 +28,10 @@ Control playback with the `cmusic` command. It is on PATH when cmusic is install
 | sleep timer / stop when this song ends / cancel it | `cmusic stop in 30m` · `stop after this` · `stop cancel` |
 | show the track in Claude Code's statusline | `cmusic statusline` (see Notes) |
 | Pomodoro / focus session | `cmusic focus` (25 min + 5 min break) · `focus 50 break 10` · `focus 25 break 0 "jazz piano"` |
+| favorite this song / unfavorite / play my favorites | `cmusic fav` · `unfav` · `favs` |
+| save the queue as a playlist / play one / list them | `cmusic save "name"` · `load "name"` · `playlists` |
+| what did I listen to | `cmusic history` (opt-in) |
+| delete everything cmusic saved | `cmusic forget` |
 | check setup | `cmusic doctor` |
 | install mpv / yt-dlp | `cmusic install` |
 
@@ -61,4 +65,5 @@ Then:
 - `focus` plays focus music, fades out when time is up, sends a desktop notification and plays upbeat music for the break, then stops. `now` shows the time left (🍅 focus, ☕ break). `stop` ends it early.
 - Audio cues (plugin hooks, opt-in): to dip the music while Claude waits for the user, set `"CMUSIC_DUCK": "1"`; for a short swell when a long task (60s+) finishes, set `"CMUSIC_CELEBRATE": "1"`. Both go in the `env` object of `~/.claude/settings.json` (merge with any existing `env`) and apply after a restart.
 - `lyrics` output can be long: show it as is, without commentary. If none are found, say so in one line.
+- Saved data: `fav` and `save` write to `~/.local/share/cmusic/` only because the user asked; the first write prints where. `history` is off unless `CMUSIC_HISTORY=1` is set in the `env` of `~/.claude/settings.json`: offer that if they ask for history, and mention it stores titles on disk. Run `forget` only when the user explicitly asks to delete their data.
 - Statusline: `cmusic statusline` prints the `statusLine` setting to add to `~/.claude/settings.json`. If the user already has a `statusLine`, don't replace it: append the output of the `now --line` command to their existing script, or ask.

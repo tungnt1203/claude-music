@@ -35,7 +35,7 @@ Long debugging session, so here's some lo-fi to keep you focused.
 - 🎧 **Play by name.** Type a song or artist and it streams from YouTube. You can also paste a YouTube or SoundCloud link.
 - 🧠 **Claude picks for you.** Ask for music for your mood or for focus, and Claude chooses something to fit.
 - 📜 **Queue and controls.** Add songs to the queue, pause, skip and change the volume, either with commands or in plain language.
-- 🔒 **Nothing to sign up for.** No accounts or API keys, and nothing is saved to disk.
+- 🔒 **Nothing to sign up for.** No accounts or API keys. Nothing is saved to disk unless you ask (favorites, playlists, opt-in history).
 
 ## 🚀 Install
 
@@ -74,6 +74,8 @@ cp -r cmusic/skills/music ~/.claude/skills/
 | `/music now` | Show what's playing |
 | `/music lyrics` | Show the lyrics, from [lrclib.net](https://lrclib.net) |
 | `/music focus 25` | Pomodoro: 25 min of focus music, a notification, then a 5 min break (`focus 50 break 10`) |
+| `/music fav` · `favs` | Favorite the current song · play your favorites, shuffled |
+| `/music save <name>` · `load <name>` | Save the queue as a playlist · play it again |
 | `/music stop in 30m` | Sleep timer, with a gentle fade-out (`stop after this` waits for the song to end) |
 
 <details>
@@ -125,7 +127,7 @@ Everything happens on your machine, through one shell script, [`skills/music/scr
 <details>
 <summary><b>Does it download songs?</b></summary>
 
-No. Music streams through RAM only, and nothing is saved to disk.
+No. Music streams through RAM only. The only things cmusic ever writes are your favorites, saved playlists and (if you turn it on with `CMUSIC_HISTORY=1`) a list of what played: titles and links, in `~/.local/share/cmusic/`. `/music forget` deletes them.
 
 </details>
 
