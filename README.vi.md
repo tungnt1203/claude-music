@@ -92,7 +92,7 @@ Khi cài dạng plugin, lệnh sẽ là `/cmusic:music`. Cũng có thể nói t�
 
 ## 🔍 Plugin chạy những gì
 
-Mọi thứ chạy trên máy bạn, qua một script shell duy nhất: [`skills/music/scripts/music.sh`](skills/music/scripts/music.sh).
+Mọi thứ chạy trên máy bạn, qua một script shell, [`skills/music/scripts/music.sh`](skills/music/scripts/music.sh), và một script Lua nhỏ chạy trong mpv, [`cmusic.lua`](skills/music/scripts/cmusic.lua), để fade âm lượng và hẹn giờ.
 
 | | |
 |---|---|

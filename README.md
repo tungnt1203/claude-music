@@ -92,7 +92,7 @@ When installed as a plugin, the command is `/cmusic:music`. You can also just sa
 
 ## 🔍 What it runs
 
-Everything happens on your machine, through one shell script: [`skills/music/scripts/music.sh`](skills/music/scripts/music.sh).
+Everything happens on your machine, through one shell script, [`skills/music/scripts/music.sh`](skills/music/scripts/music.sh), and a small mpv Lua script, [`cmusic.lua`](skills/music/scripts/cmusic.lua), for fades and timers.
 
 | | |
 |---|---|

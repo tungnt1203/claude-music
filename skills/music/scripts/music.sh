@@ -178,6 +178,26 @@ wait_title() {
   return 1
 }
 
+# True once cmusic.lua is running inside mpv (needs Lua and mpv >= 0.36 for user-data).
+lua_ready() { [ "$(expand '${user-data/cmusic/ready:no}')" = yes ]; }
+
+# Replace any running player with a new one playing <source>, keeping the volume.
+# usage: start <label> <source> [extra mpv args...]
+start() {
+  local label=$1 src=$2 vol=100; shift 2
+  if running; then
+    vol=$(expand '${user-data/cmusic/level:${volume}}'); vol=${vol%%.*}
+    ipc '{"command":["quit"]}' >/dev/null; sleep 0.5
+  fi
+  rm -f "$SOCK"
+  nohup mpv --no-video --no-terminal --input-ipc-server="$SOCK" --script="$SCRIPT_DIR/cmusic.lua" \
+    --volume="${vol:-100}" --ytdl-format=bestaudio/best "$@" "$src" >"$LOG" 2>&1 &
+  local t
+  if t=$(wait_title); then echo "▶ $t"
+  elif running; then echo "▶ loading: $label (run 'now' in a few seconds)"
+  else echo "✗ playback failed — see $LOG" >&2; tail -5 "$LOG" >&2; exit 1; fi
+}
+
 # --- commands -----------------------------------------------------------------
 
 cmd="${1:-}"; shift || true
@@ -185,13 +205,7 @@ case "$cmd" in
   play)
     [ $# -gt 0 ] || { usage; exit 1; }
     need_deps
-    running && ipc '{"command":["quit"]}' >/dev/null && sleep 0.5
-    rm -f "$SOCK"
-    nohup mpv --no-video --no-terminal --input-ipc-server="$SOCK" \
-      --ytdl-format=bestaudio/best "$(source_for "$*" | cut -f1)" >"$LOG" 2>&1 &
-    if t=$(wait_title); then echo "▶ $t"
-    elif running; then echo "▶ loading: $* (run 'now' in a few seconds)"
-    else echo "✗ playback failed — see $LOG" >&2; tail -5 "$LOG" >&2; exit 1; fi ;;
+    start "$*" "$(source_for "$*" | cut -f1)" ;;
   add)
     [ $# -gt 0 ] || { usage; exit 1; }
     running || exec "$0" play "$@"
@@ -259,8 +273,13 @@ case "$cmd" in
     ipc '{"command":["seek",0,"absolute"]}' >/dev/null; echo "🔁 $(title)" ;;
   vol|volume)
     running || { echo "⏹ nothing playing"; exit 0; }
-    [ $# -gt 0 ] && ipc "{\"command\":[\"set_property\",\"volume\",$(( ${1%%.*} + 0 ))]}" >/dev/null
-    ipc '{"command":["get_property","volume"]}' | sed -n 's/.*"data":\([0-9]*\).*/🔊 \1/p' ;;
+    if [ $# -gt 0 ]; then
+      v=$(( ${1%%.*} + 0 ))
+      # cmusic.lua owns the volume during fades; set it directly too in case Lua isn't there.
+      ipc "{\"command\":[\"script-message\",\"cmusic-volume\",\"$v\"]}" >/dev/null
+      ipc "{\"command\":[\"set_property\",\"volume\",$v]}" >/dev/null
+    fi
+    v=$(expand '${user-data/cmusic/level:${volume}}'); echo "🔊 ${v%%.*}" ;;
   now|status)
     if [ "${1:-}" = --line ]; then
       # Statusline: one IPC round trip, no waiting, and silence when nothing plays.
@@ -275,6 +294,11 @@ case "$cmd" in
     running || { echo "⏹ nothing playing"; exit 0; }
     t=$(wait_title) && echo "▶ $t" || echo "▶ loading…" ;;
   stop)
+    if running && lua_ready; then
+      # cmusic.lua fades out and quits; wait for it, then make sure.
+      ipc '{"command":["script-message","cmusic-stop"]}' >/dev/null
+      for _ in $(seq 1 15); do running || break; sleep 0.1; done
+    fi
     running && ipc '{"command":["quit"]}' >/dev/null
     rm -f "$SOCK"; echo "⏹ stopped" ;;
   statusline)
