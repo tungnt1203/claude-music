@@ -81,10 +81,12 @@ cp -r cmusic/skills/music ~/.claude/skills/
 <details>
 <summary>Lời bài hát dưới ô nhập, kiểu karaoke (plugin cmusic-lyrics)</summary>
 
-Một plugin thứ hai trong marketplace này hiện tên bài và câu đang hát ngay dưới ô nhập khi có nhạc:
+Một plugin thứ hai trong marketplace này hiện tên bài, thanh tiến trình và câu đang hát ngay dưới ô nhập khi có nhạc, và không hiện gì khi không có nhạc:
 
 ```
-♪ Mất Trí Nhớ - Chi Dân | Official… · 2:54/5:06 · 🎤 <câu đang hát>
+🎵  Mất Trí Nhớ — Chi Dân
+    ━━━━━━━━━━━━━━━━━●━━━━━━━━━━  2:38 / 5:06
+    🎤 Không thể nào nhớ những gì
 ```
 
 Gõ `/lyrics` để mở một pane bên cạnh cuộc trò chuyện, hiện lời quanh câu đó và tô sáng câu đang hát.

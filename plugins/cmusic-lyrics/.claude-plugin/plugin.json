@@ -1,8 +1,8 @@
 {
   "name": "cmusic-lyrics",
   "displayName": "cmusic lyrics",
-  "version": "0.1.0",
-  "description": "Shows cmusic's current track and the lyric being sung under the prompt; /lyrics opens a karaoke pane.",
+  "version": "0.2.0",
+  "description": "Shows cmusic's track, a progress bar and the lyric being sung under the prompt; /lyrics opens a karaoke pane.",
   "author": {
     "name": "tungnt1203",
     "email": "tung.nguyen120301@gmail.com",
