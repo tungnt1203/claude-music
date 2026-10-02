@@ -84,9 +84,8 @@ cp -r cmusic/skills/music ~/.claude/skills/
 A second plugin in this marketplace shows the track, a progress bar and the line being sung right under the prompt while music plays, and nothing when it doesn't:
 
 ```
-🎵  Mất Trí Nhớ — Chi Dân
+🎵  Mất Trí Nhớ — Chi Dân   🎤 Không thể nào nhớ những gì
     ━━━━━━━━━━━━━━━━━●━━━━━━━━━━  2:38 / 5:06
-    🎤 Không thể nào nhớ những gì
 ```
 
 `/lyrics` opens a pane beside the transcript with the lyrics around that line, the current one highlighted.
