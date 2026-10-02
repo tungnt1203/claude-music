@@ -73,6 +73,7 @@ cp -r cmusic/skills/music ~/.claude/skills/
 | `/music vol 40` | Set the volume (0–100) |
 | `/music now` | Show what's playing |
 | `/music lyrics` | Show the lyrics, from [lrclib.net](https://lrclib.net) |
+| `/music lyrics offset +5` | Lyrics ahead of the singing (a music video with an intro)? Show them 5 s later (`-5` earlier, `0` reset) |
 | `/music focus 25` | Pomodoro: 25 min of focus music, a notification, then a 5 min break (`focus 50 break 10`) |
 | `/music fav` · `favs` | Favorite the current song · play your favorites, shuffled |
 | `/music save <name>` · `load <name>` | Save the queue as a playlist · play it again |

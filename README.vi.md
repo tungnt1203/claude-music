@@ -73,6 +73,7 @@ cp -r cmusic/skills/music ~/.claude/skills/
 | `/music vol 40` | Chỉnh âm lượng (0–100) |
 | `/music now` | Xem đang phát bài gì |
 | `/music lyrics` | Xem lời bài hát, lấy từ [lrclib.net](https://lrclib.net) |
+| `/music lyrics offset +5` | Lời chạy nhanh hơn giọng hát (MV có đoạn mở đầu)? Hiện lời trễ đi 5 giây (`-5` sớm hơn, `0` đặt lại) |
 | `/music focus 25` | Pomodoro: 25 phút nhạc tập trung, có thông báo, rồi nghỉ 5 phút (`focus 50 break 10`) |
 | `/music fav` · `favs` | Thích bài đang phát · phát các bài đã thích, ngẫu nhiên |
 | `/music save <tên>` · `load <tên>` | Lưu hàng đợi thành playlist · phát lại |

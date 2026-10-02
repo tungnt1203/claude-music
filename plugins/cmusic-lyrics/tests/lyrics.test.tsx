@@ -84,4 +84,12 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(await ui.find({ type: 'Text', text: '▶ Không thể nào nhớ những gì' })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: '▶ Em là ai từ đâu bước đến' })).toBeUndefined()
   })
+
+  test(`${surface}: an offset shifts the line being sung`, async ($, on) => {
+    // 27 s into a video whose lyrics run 5 s late: still the first line (21.19 + 5 <= 27).
+    await start($, on, { ...NOW, offset: 5 })
+    const ui = await $.ui.mount({ plugin: 'cmusic-lyrics', surface, component: 'PromptHint', props: hint } as never)
+
+    expect(await ui.find({ type: 'Text', text: '🎵  Mất Trí Nhớ — Chi Dân   🎤 Em là ai từ đâu bước đến' })).toBeDefined()
+  })
 }

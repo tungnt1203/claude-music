@@ -24,6 +24,7 @@ Control playback with the `cmusic` command. It is on PATH when cmusic is install
 | volume | `cmusic vol 50` (no number prints the current volume) |
 | what's playing | `cmusic now` |
 | lyrics / what are they singing | `cmusic lyrics` · `lyrics --line` (just the current line) |
+| lyrics out of sync (ahead of / behind the singing) | `cmusic lyrics offset +5` (lyrics run ahead: show them 5 s later) · `offset -5` · `offset 0` |
 | stop | `cmusic stop` |
 | sleep timer / stop when this song ends / cancel it | `cmusic stop in 30m` · `stop after this` · `stop cancel` |
 | show the track in Claude Code's statusline | `cmusic statusline` (see Notes) |

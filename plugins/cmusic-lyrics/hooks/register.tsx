@@ -38,6 +38,7 @@ type NowJson = {
   duration?: number
   path?: string
   lyrics?: string
+  offset?: number
   lrc?: string
 }
 
@@ -147,6 +148,7 @@ async function poll($: EngineInterface): Promise<void> {
       pos: now.pos ?? 0,
       duration: now.duration ?? 0,
       lyrics: now.lyrics ?? 'loading',
+      offset: now.offset ?? 0,
     }
     await update($, track, () => next)
   } finally {
@@ -178,7 +180,7 @@ export const register: Register = on => {
     const width = Math.max(10, Math.min(30, (e.viewport?.columns ?? 80) - 24))
     const bar = progress(t.pos, t.duration, width)
     const time = t.duration > 0 ? `${mmss(t.pos)} / ${mmss(t.duration)}` : mmss(t.pos)
-    const line = t.isPaused ? undefined : lyric[currentLine(lyric, t.pos)]?.text
+    const line = t.isPaused ? undefined : lyric[currentLine(lyric, t.pos - t.offset)]?.text
 
     return (
       <Box flexDirection="column">
@@ -229,7 +231,7 @@ export const register: Register = on => {
     let body
     if (lyric.length > 0) {
       // The current line sits a third of the way down, so you can read ahead.
-      const current = currentLine(lyric, t.pos)
+      const current = currentLine(lyric, t.pos - t.offset)
       const start = Math.max(0, Math.min(current - Math.floor(rows / 3), lyric.length - rows))
       body = (
         <Box flexDirection="column">
