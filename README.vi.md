@@ -84,9 +84,8 @@ cp -r cmusic/skills/music ~/.claude/skills/
 Một plugin thứ hai trong marketplace này hiện tên bài, thanh tiến trình và câu đang hát ngay dưới ô nhập khi có nhạc, và không hiện gì khi không có nhạc:
 
 ```
-🎵  Mất Trí Nhớ — Chi Dân
+🎵  Mất Trí Nhớ — Chi Dân   🎤 Không thể nào nhớ những gì
     ━━━━━━━━━━━━━━━━━●━━━━━━━━━━  2:38 / 5:06
-    🎤 Không thể nào nhớ những gì
 ```
 
 Gõ `/lyrics` để mở một pane bên cạnh cuộc trò chuyện, hiện lời quanh câu đó và tô sáng câu đang hát.

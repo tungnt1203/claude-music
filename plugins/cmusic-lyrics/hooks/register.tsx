@@ -3,10 +3,9 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { Line, Track } from '../types'
 
-// While music plays, three rows under the prompt, above Claude Code's own hint line:
-//   🎵  Mất Trí Nhớ — Chi Dân
+// While music plays, two rows under the prompt, above Claude Code's own hint line:
+//   🎵  Mất Trí Nhớ — Chi Dân   🎤 Không thể nào nhớ những gì
 //       ━━━━━━━━━━━●━━━━━━  2:38 / 5:06
-//       🎤 Không thể nào nhớ những gì
 // Nothing when idle. /lyrics opens a pane beside the transcript with the lyrics around it.
 
 const PANE = 'cmusic-lyrics'
@@ -183,8 +182,11 @@ export const register: Register = on => {
 
     return (
       <Box flexDirection="column">
-        <Text bold wrap="truncate-end">
-          {t.isPaused ? '⏸ ' : '🎵 '} {t.isLoading ? 'Loading…' : cleanTitle(t.title)}
+        <Text wrap="truncate-end">
+          <Text bold>
+            {t.isPaused ? '⏸ ' : '🎵 '} {t.isLoading ? 'Loading…' : cleanTitle(t.title)}
+          </Text>
+          {line ? <Text dimColor>{`   🎤 ${line}`}</Text> : null}
         </Text>
         <Text wrap="truncate-end">
           {'    '}
@@ -193,12 +195,6 @@ export const register: Register = on => {
           {'  '}
           {time}
         </Text>
-        {line ? (
-          <Text dimColor wrap="truncate-end">
-            {'    🎤 '}
-            {line}
-          </Text>
-        ) : null}
         {engineLine}
       </Box>
     )

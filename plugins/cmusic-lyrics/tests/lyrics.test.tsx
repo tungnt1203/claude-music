@@ -49,9 +49,9 @@ for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ plugin: 'cmusic-lyrics', surface, component: 'PromptHint', props: hint } as never)
 
     expect(opened).toEqual([]) // nothing opens unasked
-    expect(await ui.find({ type: 'Text', text: '🎵  Mất Trí Nhớ — Chi Dân' })).toBeDefined()
+    // The lyric sits beside the title, on one row.
+    expect(await ui.find({ type: 'Text', text: '🎵  Mất Trí Nhớ — Chi Dân   🎤 Không thể nào nhớ những gì' })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: /●.*0:27 \/ 5:06/ })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: '    🎤 Không thể nào nhớ những gì' })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: 'auto mode on' })).toBeDefined() // Claude Code's own line stays
   })
 
@@ -59,7 +59,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await start($, on, { ...NOW, paused: true })
     const ui = await $.ui.mount({ plugin: 'cmusic-lyrics', surface, component: 'PromptHint', props: hint } as never)
 
-    expect(await ui.find({ type: 'Text', text: /^⏸/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: '⏸  Mất Trí Nhớ — Chi Dân' })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: /🎤/ })).toBeUndefined()
   })
 
