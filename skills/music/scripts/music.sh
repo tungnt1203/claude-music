@@ -11,6 +11,9 @@ usage() {
 usage: music.sh <command> [args]
   play <query|url>   replace current playback with a YouTube search result or URL
   add  <query|url>   append to the queue (starts playback if idle)
+  queue              list the queue (alias: list)
+  remove <n>         remove track n from the queue
+  clear              clear the queue, keeping the current track
   pause              toggle pause / resume
   next               skip to the next track in the queue
   prev               previous track (restarts the current one if past 5s)
@@ -138,16 +141,26 @@ mmss() { awk -v t="${1:-0}" 'BEGIN { t = int(t); h = int(t / 3600); m = int(t % 
 # m:ss / h:mm:ss / plain seconds -> seconds
 to_secs() { awk -F: '{ s = 0; for (i = 1; i <= NF; i++) s = s * 60 + $i; print s }' <<<"$1"; }
 
-json_escape() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+json_escape() { local s=${1//\\/\\\\}; s=${s//\"/\\\"}; s=${s//$'\n'/\\n}; printf '%s' "${s//$'\t'/\\t}"; }
 
-# URLs pass through. Queries resolve to the first *video* result: the top hit is often a
-# channel (e.g. an artist name), which mpv would expand into hundreds of queued videos.
+# Print "<url>\t<title>". URLs pass through (titled by the URL itself). Queries resolve to the
+# first *video* result: the top hit is often a channel (e.g. an artist name), which mpv would
+# expand into hundreds of queued videos.
 source_for() {
-  case "$1" in http://*|https://*) echo "$1"; return ;; esac
-  local url
-  url=$(yt-dlp --no-warnings --flat-playlist --print "%(ie_key)s %(url)s" "ytsearch5:$1" 2>/dev/null \
-    | awk '$1 == "Youtube" { print $2; exit }') || true
-  echo "${url:-ytdl://ytsearch1:$1}"
+  case "$1" in http://*|https://*) printf '%s\t%s\n' "$1" "$1"; return ;; esac
+  local hit
+  hit=$(yt-dlp --no-warnings --flat-playlist --print "%(ie_key)s %(url)s %(title)s" "ytsearch5:$1" 2>/dev/null \
+    | awk '$1 == "Youtube" { url = $2; sub(/^[^ ]+ [^ ]+ /, ""); print url "\t" $0; exit }') || true
+  if [ -n "$hit" ]; then echo "$hit"; else printf 'ytdl://ytsearch1:%s\t%s\n' "$1" "$1"; fi
+}
+
+# Queue a source with its title, so `queue` can name tracks before they load.
+append() {
+  local src; src=$(source_for "$1")
+  ipc "{\"command\":[\"loadlist\",\"$(json_escape "memory://#EXTM3U
+#EXTINF:0,${src#*$'\t'}
+${src%%$'\t'*}")\",\"append-play\"]}" >/dev/null
+  echo "${src#*$'\t'}"
 }
 
 title() { ipc '{"command":["get_property","media-title"]}' | data_str; }
@@ -173,15 +186,40 @@ case "$cmd" in
     running && ipc '{"command":["quit"]}' >/dev/null && sleep 0.5
     rm -f "$SOCK"
     nohup mpv --no-video --no-terminal --input-ipc-server="$SOCK" \
-      --ytdl-format=bestaudio/best "$(source_for "$*")" >"$LOG" 2>&1 &
+      --ytdl-format=bestaudio/best "$(source_for "$*" | cut -f1)" >"$LOG" 2>&1 &
     if t=$(wait_title); then echo "▶ $t"
     elif running; then echo "▶ loading: $* (run 'now' in a few seconds)"
     else echo "✗ playback failed — see $LOG" >&2; tail -5 "$LOG" >&2; exit 1; fi ;;
-  add|queue)
+  add)
     [ $# -gt 0 ] || { usage; exit 1; }
     running || exec "$0" play "$@"
-    ipc "{\"command\":[\"loadfile\",\"$(json_escape "$(source_for "$*")")\",\"append-play\"]}" >/dev/null
-    echo "+ queued: $*" ;;
+    echo "+ queued: $(append "$*")" ;;
+  queue|list)
+    [ $# -gt 0 ] && exec "$0" add "$@"
+    running || { echo "⏹ nothing playing"; exit 0; }
+    n=$(expand '${playlist-count}|${playlist-pos}'); count=${n%|*}; pos=${n#*|}
+    # Long playlists: show from the current track on, 20 at most.
+    first=0; [ "$count" -gt 20 ] && first=$pos
+    last=$(( first + 20 < count ? first + 20 : count ))
+    tpl=""
+    for (( i = first; i < last; i++ )); do tpl+="\${playlist/$i/title:\${playlist/$i/filename}}"$'\n'; done
+    i=$first
+    while IFS= read -r line; do
+      [ "$i" = "$pos" ] && line=$(title)
+      if [ "$i" = "$pos" ]; then printf '▶ %d. %s\n' $(( i + 1 )) "$line"; else printf '  %d. %s\n' $(( i + 1 )) "$line"; fi
+      i=$(( i + 1 ))
+    done < <(expand "${tpl%$'\n'}" | sed 's|^ytdl://ytsearch1:||')
+    [ "$last" -lt "$count" ] && echo "  … $(( count - last )) more"
+    true ;;
+  remove|rm)
+    running || { echo "⏹ nothing playing"; exit 0; }
+    [[ "${1:-}" =~ ^[0-9]+$ ]] && [ "$1" -ge 1 ] || { echo "usage: remove <n>   (n from 'queue')" >&2; exit 1; }
+    t=$(expand "\${playlist/$(( $1 - 1 ))/title:\${playlist/$(( $1 - 1 ))/filename}}")
+    if ipc "{\"command\":[\"playlist-remove\",$(( $1 - 1 ))]}" | grep -q '"error":"success"'; then echo "− removed: $t"
+    else echo "✗ no track $1 in the queue" >&2; exit 1; fi ;;
+  clear)
+    running || { echo "⏹ nothing playing"; exit 0; }
+    ipc '{"command":["playlist-clear"]}' >/dev/null; echo "✓ queue cleared (current track keeps playing)" ;;
   pause|resume|toggle)
     running || { echo "⏹ nothing playing"; exit 0; }
     ipc '{"command":["cycle","pause"]}' >/dev/null

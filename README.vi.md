@@ -66,6 +66,7 @@ cp -r cmusic/skills/music ~/.claude/skills/
 | `/music <tên bài>` | Phát bài theo tên, hoặc phát từ link |
 | `/music` | Để Claude tự chọn theo mood |
 | `/music add <tên bài>` | Thêm vào hàng đợi |
+| `/music queue` | Xem hàng đợi (`remove 2`, `clear` để sửa) |
 | `/music pause` · `next` · `prev` · `stop` | Điều khiển phát nhạc |
 | `/music seek +30` · `seek 1:30` · `replay` | Tua trong bài |
 | `/music vol 40` | Chỉnh âm lượng (0–100) |

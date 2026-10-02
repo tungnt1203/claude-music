@@ -66,6 +66,7 @@ cp -r cmusic/skills/music ~/.claude/skills/
 | `/music <song>` | Play a song by name, or play a link |
 | `/music` | Let Claude pick for your mood |
 | `/music add <song>` | Add to the queue |
+| `/music queue` | Show the queue (`remove 2` and `clear` edit it) |
 | `/music pause` · `next` · `prev` · `stop` | Control playback |
 | `/music seek +30` · `seek 1:30` · `replay` | Jump within the track |
 | `/music vol 40` | Set the volume (0–100) |

@@ -12,6 +12,8 @@ Control playback with the `cmusic` command. It is on PATH when cmusic is install
 |---|---|
 | play X (replaces current) | `cmusic play "X"` |
 | queue X after the current track | `cmusic add "X"` |
+| show the queue | `cmusic queue` |
+| remove track n from the queue / clear it | `cmusic remove 2` · `cmusic clear` |
 | pause / resume | `cmusic pause` |
 | skip | `cmusic next` |
 | previous track (restarts the current one if past 5s) | `cmusic prev` |
