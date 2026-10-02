@@ -304,11 +304,16 @@ local function lyrics_entry(best, query)
     return entry
 end
 
-mp.register_script_message("cmusic-lyrics", function()
+-- Until a track has loaded, media-title is still its URL, which finds nothing: a lookup
+-- asked for then (the lyrics plugin asks as soon as a track starts) waits for file-loaded.
+local track_loaded, lookup_waiting = false, false
+
+local function lookup()
     local path = mp.get_property("path")
     if lyrics_cache[path] then return show(lyrics_cache[path]) end
     stop_line_observer()
     publish("lyrics-status", "loading")
+    if not track_loaded then lookup_waiting = true; return end
     local queries, duration = queries_for(mp.get_property("media-title", "")), mp.get_property_number("duration")
 
     local function try(i)
@@ -327,9 +332,16 @@ mp.register_script_message("cmusic-lyrics", function()
         end)
     end
     try(1)
+end
+
+mp.register_script_message("cmusic-lyrics", lookup)
+mp.register_event("file-loaded", function()
+    track_loaded = true
+    if lookup_waiting then lookup_waiting = false; lookup() end
 end)
 
 mp.register_event("start-file", function()
+    track_loaded, lookup_waiting = false, false
     stop_line_observer()
     publish("lyrics-status", "")
     publish("lyrics", "")
