@@ -1,5 +1,5 @@
 -- cmusic.lua — loaded into mpv by music.sh (--script). Runs the parts that must outlive the
--- shell command: fades and timers. music.sh talks to it with `script-message cmusic-*`
+-- shell command: fades, timers and radio. music.sh talks to it with `script-message cmusic-*`
 -- and reads its state from `user-data/cmusic/*`.
 
 local FADE_IN, FADE_OUT, FADE_SLEEP = 1.5, 1.0, 10
@@ -127,5 +127,52 @@ mp.register_script_message("cmusic-focus", function(focus_secs, break_secs, brea
     end)
 end)
 
+-- Radio ---------------------------------------------------------------------------------
+-- When the last queued track starts, append unplayed songs from its YouTube Mix
+-- (list=RD<id>, no API key), so playback never runs out.
+local radio, played, fetching = mp.get_opt("cmusic-radio") == "yes", {}, false
+
+local function video_id(path)
+    return path and (path:match("[?&]v=([%w_-]+)") or path:match("youtu%.be/([%w_-]+)"))
+end
+
+local function refill()
+    local pos, count = mp.get_property_number("playlist-pos", 0), mp.get_property_number("playlist-count", 0)
+    local id = video_id(mp.get_property("path"))
+    if not radio or fetching or not id or pos < count - 1 then return end
+    fetching = true
+    mp.command_native_async({
+        name = "subprocess", capture_stdout = true, playback_only = false,
+        args = { "yt-dlp", "--no-warnings", "--flat-playlist", "--playlist-end", "25", "--print", "%(id)s %(title)s",
+                 "https://www.youtube.com/watch?v=" .. id .. "&list=RD" .. id },
+    }, function(_, r)
+        fetching = false
+        local m3u, n = { "#EXTM3U" }, 0
+        for line in ((r and r.stdout) or ""):gmatch("[^\n]+") do
+            local vid, title = line:match("^(%S+) (.*)$")
+            if vid and not played[vid] and n < 10 then
+                played[vid] = true -- also stops the same song being queued twice
+                m3u[#m3u + 1] = "#EXTINF:0," .. title
+                m3u[#m3u + 1] = "https://www.youtube.com/watch?v=" .. vid
+                n = n + 1
+            end
+        end
+        if n > 0 then mp.commandv("loadlist", "memory://" .. table.concat(m3u, "\n"), "append") end
+    end)
+end
+
+mp.register_event("file-loaded", function()
+    local id = video_id(mp.get_property("path"))
+    if id then played[id] = true end
+    refill()
+end)
+
+mp.register_script_message("cmusic-radio", function(on)
+    radio = on == "on"
+    publish("radio", radio and "on" or "off")
+    refill()
+end)
+
+publish("radio", radio and "on" or "off")
 set_level(level)
 publish("ready", "yes")

@@ -25,6 +25,8 @@ usage: music.sh <command> [args]
   statusline         print the statusLine setting that shows the current track
   stop               stop playback and quit mpv (fades out)
   stop in <30m|1h>   sleep timer; also: stop after this (end of track), stop cancel
+  radio [on|off]     keep playing related songs when the queue runs out
+  radio <query|url>  start a radio from a song
   focus [min] [break <min>] [query]
                      Pomodoro: focus music for 25 min, then a 5 min break
   doctor             check dependencies
@@ -340,6 +342,17 @@ case "$cmd" in
     fi
     running && ipc '{"command":["quit"]}' >/dev/null
     rm -f "$SOCK"; echo "⏹ stopped" ;;
+  radio)
+    case "${1:-}" in
+      "") running || { echo "⏹ nothing playing"; exit 0; }
+        echo "📻 radio $(expand '${user-data/cmusic/radio:off}')" ;;
+      on|off) running || { echo "⏹ nothing playing"; exit 0; }
+        lua_ready || { echo "✗ radio needs mpv >= 0.36 with Lua (see: doctor)" >&2; exit 1; }
+        ipc "{\"command\":[\"script-message\",\"cmusic-radio\",\"$1\"]}" >/dev/null; echo "📻 radio $1" ;;
+      *) need_deps
+        start "$*" "$(source_for "$*" | cut -f1)" --script-opts=cmusic-radio=yes
+        echo "📻 radio on: related songs will keep playing" ;;
+    esac ;;
   focus|pomodoro)
     need_deps
     focus=1500 brk=300
