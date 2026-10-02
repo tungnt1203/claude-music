@@ -35,7 +35,7 @@ Debug lâu rồi, mình bật lo-fi cho bạn tập trung nhé.
 - 🎧 **Phát theo tên bài.** Gõ tên bài hoặc ca sĩ là nhạc phát từ YouTube. Bạn cũng có thể dán link YouTube hoặc SoundCloud.
 - 🧠 **Claude chọn nhạc giúp bạn.** Muốn nghe gì hợp mood, hay cần nhạc để tập trung, cứ bảo Claude.
 - 📜 **Hàng đợi và điều khiển.** Thêm bài vào hàng đợi, tạm dừng, qua bài, chỉnh âm lượng, bằng lệnh hoặc nói tự nhiên.
-- 🔒 **Không cần đăng ký gì.** Không tài khoản, không API key, không lưu file nào xuống ổ cứng.
+- 🔒 **Không cần đăng ký gì.** Không tài khoản, không API key. Không lưu gì xuống ổ cứng trừ khi bạn yêu cầu (bài yêu thích, playlist, lịch sử nếu bật).
 
 ## 🚀 Cài đặt
 
@@ -66,28 +66,68 @@ cp -r cmusic/skills/music ~/.claude/skills/
 | `/music <tên bài>` | Phát bài theo tên, hoặc phát từ link |
 | `/music` | Để Claude tự chọn theo mood |
 | `/music add <tên bài>` | Thêm vào hàng đợi |
-| `/music pause` · `next` · `stop` | Điều khiển phát nhạc |
+| `/music radio <tên bài>` | Phát radio: tự nối các bài liên quan (`radio on` / `off` cho hàng đợi hiện tại) |
+| `/music queue` | Xem hàng đợi (`remove 2`, `clear` để sửa) |
+| `/music pause` · `next` · `prev` · `stop` | Điều khiển phát nhạc |
+| `/music seek +30` · `seek 1:30` · `replay` | Tua trong bài |
 | `/music vol 40` | Chỉnh âm lượng (0–100) |
 | `/music now` | Xem đang phát bài gì |
+| `/music lyrics` | Xem lời bài hát, lấy từ [lrclib.net](https://lrclib.net) |
+| `/music focus 25` | Pomodoro: 25 phút nhạc tập trung, có thông báo, rồi nghỉ 5 phút (`focus 50 break 10`) |
+| `/music fav` · `favs` | Thích bài đang phát · phát các bài đã thích, ngẫu nhiên |
+| `/music save <tên>` · `load <tên>` | Lưu hàng đợi thành playlist · phát lại |
+| `/music stop in 30m` | Hẹn giờ tắt nhạc, nhỏ dần rồi tắt (`stop after this`: tắt khi hết bài) |
+
+<details>
+<summary>Hiện bài đang phát trên statusline</summary>
+
+Nhờ Claude *"hiện nhạc lên statusline"*, hoặc thêm vào `~/.claude/settings.json`:
+
+```json
+"statusLine": {
+  "type": "command",
+  "command": "\"$(ls -td ~/.claude/plugins/cache/cmusic/cmusic/*/ | head -1)bin/cmusic\" now --line"
+}
+```
+
+Nó in ra `♪ Nơi này có anh · 1:23/4:10` (`⏸` khi tạm dừng) và không in gì khi không có nhạc. Đã có statusline riêng? Nối thêm output của lệnh trên vào statusline của bạn. `cmusic statusline` in ra đúng lệnh cho cách cài của bạn.
+
+</details>
+
+<details>
+<summary>Tín hiệu âm thanh từ Claude: nhỏ lại khi chờ, to lên khi xong việc (tùy chọn)</summary>
+
+- **Nhỏ lại**: khi Claude cần bạn trả lời (hỏi quyền, hoặc làm xong và đang chờ), nhạc nhỏ xuống 30% để bạn để ý, rồi to lại khi bạn trả lời.
+- **To lên**: khi Claude làm xong một việc mất hơn một phút, nhạc to lên một chút rồi trở lại.
+
+Chỉ có khi cài dạng plugin. Bật trong `~/.claude/settings.json`:
+
+```json
+"env": { "CMUSIC_DUCK": "1", "CMUSIC_CELEBRATE": "1" }
+```
+
+`CMUSIC_DUCK_LEVEL` chỉnh mức giảm (phần trăm, mặc định `30`); `CMUSIC_CELEBRATE_AFTER` chỉnh bao lâu thì tính là việc dài (giây, mặc định `60`).
+
+</details>
 
 Khi cài dạng plugin, lệnh sẽ là `/cmusic:music`. Cũng có thể nói tự nhiên: *"bật nhạc lo-fi đi"*, *"tắt nhạc"*.
 
 ## 🔍 Plugin chạy những gì
 
-Mọi thứ chạy trên máy bạn, qua một script shell duy nhất: [`skills/music/scripts/music.sh`](skills/music/scripts/music.sh).
+Mọi thứ chạy trên máy bạn, qua một script shell, [`skills/music/scripts/music.sh`](skills/music/scripts/music.sh), và một script Lua nhỏ chạy trong mpv, [`cmusic.lua`](skills/music/scripts/cmusic.lua), để fade âm lượng và hẹn giờ.
 
 | | |
 |---|---|
 | **Phát nhạc** | [`mpv`](https://mpv.io) stream tiếng thông qua [`yt-dlp`](https://github.com/yt-dlp/yt-dlp), và được điều khiển qua một socket nằm trong thư mục tạm trên máy |
 | **Cài đặt** | Chỉ chạy khi máy còn thiếu tool. macOS: `brew install mpv yt-dlp`. Linux: `pipx install yt-dlp` nếu máy có pipx, còn mpv (và yt-dlp nếu không có pipx) thì cài từ apt, dnf, pacman, zypper hoặc apk qua `sudo` |
-| **Kết nối mạng** | Chỉ tới YouTube hoặc link bạn đưa, và tới nguồn cài gói (Homebrew, PyPI, mirror của distro) khi cài đặt. Không thu thập dữ liệu sử dụng |
+| **Kết nối mạng** | Chỉ tới YouTube hoặc link bạn đưa, [lrclib.net](https://lrclib.net) khi bạn xem lời bài hát, và tới nguồn cài gói (Homebrew, PyPI, mirror của distro) khi cài đặt. Không thu thập dữ liệu sử dụng |
 
 ## ❓ Hỏi đáp
 
 <details>
 <summary><b>Có tải nhạc về máy không?</b></summary>
 
-Không. Nhạc chỉ stream qua RAM, không lưu file nào xuống ổ cứng.
+Không. Nhạc chỉ stream qua RAM. Thứ duy nhất cmusic ghi xuống là bài yêu thích, playlist đã lưu và (nếu bạn bật bằng `CMUSIC_HISTORY=1`) danh sách bài đã nghe: chỉ tên bài và link, trong `~/.local/share/cmusic/`. `/music forget` xóa hết.
 
 </details>
 
