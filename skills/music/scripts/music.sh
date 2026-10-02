@@ -13,6 +13,9 @@ usage: music.sh <command> [args]
   add  <query|url>   append to the queue (starts playback if idle)
   pause              toggle pause / resume
   next               skip to the next track in the queue
+  prev               previous track (restarts the current one if past 5s)
+  seek <+s|-s|m:ss>  seek relative (+30, -10) or absolute (1:30, 90)
+  replay             restart the current track
   vol [0-100]        set volume, or print it
   now                print the current track
   stop               stop playback and quit mpv
@@ -118,8 +121,22 @@ running() {
   else ipc '{"command":["get_property","pid"]}' | grep -q '"error":"success"'; fi
 }
 
-# Extract the "data" string from an mpv reply (titles may contain escaped quotes).
-data_str() { sed -n 's/.*"data":"\(.*\)","request_id".*/\1/p' | sed 's/\\"/"/g; s/\\\\/\\/g'; }
+# Extract the "data" string from an mpv reply and undo JSON escapes (\\ first, via a placeholder).
+data_str() {
+  sed -n 's/.*"data":"\(.*\)","request_id".*/\1/p' | awk '{
+    gsub(/\\\\/, "\001"); gsub(/\\"/, "\""); gsub(/\\n/, "\n"); gsub(/\\t/, "\t"); gsub(/\\\//, "/")
+    gsub(/\001/, "\\"); print }'
+}
+
+# Expand an mpv property template (e.g. '${pause}|${=time-pos}') in one round trip.
+expand() { ipc "{\"command\":[\"expand-text\",\"$(json_escape "$1")\"]}" | data_str; }
+
+# seconds -> m:ss (h:mm:ss past an hour)
+mmss() { awk -v t="${1:-0}" 'BEGIN { t = int(t); h = int(t / 3600); m = int(t % 3600 / 60)
+  if (h) printf "%d:%02d:%02d", h, m, t % 60; else printf "%d:%02d", m, t % 60 }'; }
+
+# m:ss / h:mm:ss / plain seconds -> seconds
+to_secs() { awk -F: '{ s = 0; for (i = 1; i <= NF; i++) s = s * 60 + $i; print s }' <<<"$1"; }
 
 json_escape() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
 
@@ -175,6 +192,31 @@ case "$cmd" in
     ipc '{"command":["playlist-next","force"]}' >/dev/null
     sleep 1
     if running; then t=$(wait_title) && echo "⏭ $t" || echo "⏭ loading…"; else rm -f "$SOCK"; echo "⏹ queue ended"; fi ;;
+  prev|previous|back)
+    running || { echo "⏹ nothing playing"; exit 0; }
+    pos=$(expand '${=time-pos:0}|${=playlist-pos:0}')
+    if [ "${pos#*|}" -gt 0 ] && awk -v t="${pos%|*}" 'BEGIN { exit !(t < 5) }'; then
+      ipc '{"command":["playlist-prev","force"]}' >/dev/null; sleep 1
+      t=$(wait_title) && echo "⏮ $t" || echo "⏮ loading…"
+    else
+      ipc '{"command":["seek",0,"absolute"]}' >/dev/null; echo "⏮ $(title)"
+    fi ;;
+  seek)
+    running || { echo "⏹ nothing playing"; exit 0; }
+    case "${1:-}" in
+      [+-][0-9]*) mode=relative; secs="${1:0:1}$(to_secs "${1:1}")" ;;
+      [0-9]*) mode=absolute; secs=$(to_secs "$1") ;;
+      *) echo "usage: seek +30 | -10 | 1:30" >&2; exit 1 ;;
+    esac
+    # A track that is still opening rejects seeks, so retry for a few seconds.
+    for _ in $(seq 1 20); do
+      ipc "{\"command\":[\"seek\",\"$secs\",\"$mode\"]}" | grep -q '"error":"success"' && break
+      sleep 0.3
+    done
+    t=$(expand '${=time-pos:0}|${=duration:0}'); echo "⏩ $(mmss "${t%|*}")/$(mmss "${t#*|}")" ;;
+  replay|restart)
+    running || { echo "⏹ nothing playing"; exit 0; }
+    ipc '{"command":["seek",0,"absolute"]}' >/dev/null; echo "🔁 $(title)" ;;
   vol|volume)
     running || { echo "⏹ nothing playing"; exit 0; }
     [ $# -gt 0 ] && ipc "{\"command\":[\"set_property\",\"volume\",$(( ${1%%.*} + 0 ))]}" >/dev/null

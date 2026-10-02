@@ -1,7 +1,7 @@
 ---
 name: music
 description: Play background music from YouTube (audio only, via mpv) while working. Use when the user types /music, asks to play/put on/queue a song, skip, pause, stop the music, change the volume, asks what's playing, or asks Claude to pick music for a mood or for focus.
-argument-hint: "[song | stop | pause | next | vol N | now | add <song>]"
+argument-hint: "[song | stop | pause | next | prev | seek +30 | vol N | now | add <song>]"
 ---
 
 # Music
@@ -14,6 +14,9 @@ Control playback with the `cmusic` command. It is on PATH when cmusic is install
 | queue X after the current track | `cmusic add "X"` |
 | pause / resume | `cmusic pause` |
 | skip | `cmusic next` |
+| previous track (restarts the current one if past 5s) | `cmusic prev` |
+| jump forward / back / to a time | `cmusic seek +30` · `seek -10` · `seek 1:30` |
+| play this one again from the start | `cmusic replay` |
 | volume | `cmusic vol 50` (no number prints the current volume) |
 | what's playing | `cmusic now` |
 | stop | `cmusic stop` |
