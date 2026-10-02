@@ -496,7 +496,14 @@ EOF
     esac
     exit 0 ;;
   doctor)
-    need_deps; echo "✓ mpv $(mpv --version | head -1 | awk '{print $2}'), yt-dlp $(yt-dlp --version)" ;;
+    need_deps; v=$(mpv --version | head -1 | awk '{print $2}')
+    echo "✓ mpv $v, yt-dlp $(yt-dlp --version)"
+    # Fades, timers, radio, ducking and lyrics run in cmusic.lua: they need Lua and user-data (0.36+).
+    if ! mpv -v --no-config --idle=no 2>&1 | grep -i 'enabled features' | grep -qE '(: | )lua'; then
+      echo "! this mpv has no Lua: fades, timers, focus, radio, ducking and lyrics won't work"
+    elif ! awk -v v="${v#v}" 'BEGIN { split(v, p, "."); exit !(p[1] > 0 || p[2] >= 36) }'; then
+      echo "! mpv $v is older than 0.36: fades, timers, focus, radio, ducking and lyrics need 0.36+"
+    else echo "✓ Lua scripting (fades, timers, radio, lyrics)"; fi ;;
   install)
     install_deps ;;
   *) usage; exit 1 ;;

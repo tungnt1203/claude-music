@@ -1,7 +1,7 @@
 ---
 name: music
-description: Play background music from YouTube (audio only, via mpv) while working. Use when the user types /music, asks to play/put on/queue a song, skip, pause, stop the music, change the volume, asks what's playing, or asks Claude to pick music for a mood or for focus.
-argument-hint: "[song | stop | pause | next | prev | seek +30 | vol N | now | add <song>]"
+description: Play background music from YouTube (audio only, via mpv) while working. Use when the user types /music, asks to play/put on/queue a song, skip, go back, seek, pause, stop the music (now or on a timer), change the volume, asks what's playing or for the lyrics, wants a radio of similar songs, a Pomodoro/focus session, to favorite or save songs and playlists, or asks Claude to pick music for a mood or for focus.
+argument-hint: "[song | add <song> | queue | next | prev | pause | stop [in 30m] | vol N | now | lyrics | radio <song> | focus 25 | fav]"
 ---
 
 # Music
