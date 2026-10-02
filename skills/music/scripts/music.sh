@@ -170,12 +170,40 @@ json_escape() { local s=${1//\\/\\\\}; s=${s//\"/\\\"}; s=${s//$'\n'/\\n}; print
 # Print "<url>\t<title>". URLs pass through untitled (mpv names them once they load). Queries resolve to the
 # first *video* result: the top hit is often a channel (e.g. an artist name), which mpv would
 # expand into hundreds of queued videos.
+#
+# A song's official audio release (YouTube Music's "songs") has no music-video intro, so
+# synced lyrics line up with it. It's looked up alongside and wins when the query names it:
+# a mood query ("lofi hip hop") keeps the top video, and so does one asking for a version
+# (live, remix, …) the song isn't.
 source_for() {
   case "$1" in http://*|https://*) printf '%s\t\n' "$1"; return ;; esac
-  local hit
+  local hit song songs
+  songs=$(mktemp)
+  yt-dlp --no-warnings --flat-playlist --playlist-items 1 --print "%(id)s %(title)s" \
+    "https://music.youtube.com/search?q=${1//[#&]/ }#songs" >"$songs" 2>/dev/null &
   hit=$(yt-dlp --no-warnings --flat-playlist --print "%(ie_key)s %(url)s %(title)s" "ytsearch5:$1" 2>/dev/null \
     | awk '$1 == "Youtube" { url = $2; sub(/^[^ ]+ [^ ]+ /, ""); print url "\t" $0; exit }') || true
-  if [ -n "$hit" ]; then echo "$hit"; else printf 'ytdl://ytsearch1:%s\t%s\n' "$1" "$1"; fi
+  wait $! || true
+  song=$(head -1 "$songs"); rm -f "$songs"
+  if [ -n "$song" ] && names_song "$1" "${song#* }"; then
+    printf 'https://www.youtube.com/watch?v=%s\t%s\n' "${song%% *}" "${song#* }"
+  elif [ -n "$hit" ]; then echo "$hit"; else printf 'ytdl://ytsearch1:%s\t%s\n' "$1" "$1"; fi
+}
+
+# Lowercase, accents and punctuation dropped, padded: " ngay mai nguoi ta lay chong ".
+fold_text() {
+  perl -CSA -MUnicode::Normalize -e '$_ = NFD(lc $ARGV[0]); s/\pM//g; tr/\x{111}/d/;
+    s/[^\pL\pN]+/ /g; s/^ | $//g; print " $_ "' -- "$1" 2>/dev/null || printf ' %s ' "$1"
+}
+
+# True when <query> names <song> and asks for no version <song> isn't.
+names_song() {
+  local q s w; q=$(fold_text "$1"); s=$(fold_text "$2")
+  [ "$s" != "  " ] && [[ "$q" == *"$s"* ]] || return 1
+  for w in live remix cover acoustic karaoke mv video lofi mashup slowed nightcore beat instrumental; do
+    [[ "$q" == *" $w "* && "$s" != *" $w "* ]] && return 1
+  done
+  return 0
 }
 
 # Queue a source with its title, so `queue` can name tracks before they load. Prints the title.

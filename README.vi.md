@@ -63,7 +63,7 @@ cp -r cmusic/skills/music ~/.claude/skills/
 
 | Lệnh | Tác dụng |
 |---|---|
-| `/music <tên bài>` | Phát bài theo tên, hoặc phát từ link |
+| `/music <tên bài>` | Phát bài theo tên (bản audio chính thức, để lời khớp nhạc; thêm `mv` hay `live` để nghe bản video), hoặc phát từ link |
 | `/music` | Để Claude tự chọn theo mood |
 | `/music add <tên bài>` | Thêm vào hàng đợi |
 | `/music radio <tên bài>` | Phát radio: tự nối các bài liên quan (`radio on` / `off` cho hàng đợi hiện tại) |
