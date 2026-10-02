@@ -72,6 +72,22 @@ cp -r cmusic/skills/music ~/.claude/skills/
 | `/music vol 40` | Set the volume (0–100) |
 | `/music now` | Show what's playing |
 
+<details>
+<summary>Show the current track in the statusline</summary>
+
+Ask Claude to *"show the music in my statusline"*, or add this to `~/.claude/settings.json`:
+
+```json
+"statusLine": {
+  "type": "command",
+  "command": "\"$(ls -td ~/.claude/plugins/cache/cmusic/cmusic/*/ | head -1)bin/cmusic\" now --line"
+}
+```
+
+It prints `♪ Nơi này có anh · 1:23/4:10` (`⏸` when paused) and nothing when no music is playing. Already have a statusline? Append the output of that command to yours. `cmusic statusline` prints the right command for your install.
+
+</details>
+
 When installed as a plugin, the command is `/cmusic:music`. You can also just say *"play some lo-fi"* or *"stop the music"*.
 
 ## 🔍 What it runs

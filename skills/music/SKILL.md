@@ -22,6 +22,7 @@ Control playback with the `cmusic` command. It is on PATH when cmusic is install
 | volume | `cmusic vol 50` (no number prints the current volume) |
 | what's playing | `cmusic now` |
 | stop | `cmusic stop` |
+| show the track in Claude Code's statusline | `cmusic statusline` (see Notes) |
 | check setup | `cmusic doctor` |
 | install mpv / yt-dlp | `cmusic install` |
 
@@ -41,3 +42,4 @@ For `/music` with no argument, or requests like "put something on", "music to fo
 - Exit code 2 means mpv or yt-dlp is missing. Say in one line that you're installing them, run `cmusic install` (it can take a minute or two), then retry the original command. Don't ask first: the user asked for music, and Claude Code's permission prompt already gates the install.
 - `install` exit code 3 means the user has to act (usually a sudo password on Linux, or Homebrew missing on macOS). Show the exact command from the output and suggest running it with the `!` prefix, e.g. `! sudo apt-get install -y mpv`, then retry.
 - On failure, the error output points to the mpv log file.
+- Statusline: `cmusic statusline` prints the `statusLine` setting to add to `~/.claude/settings.json`. If the user already has a `statusLine`, don't replace it: append the output of the `now --line` command to their existing script, or ask.

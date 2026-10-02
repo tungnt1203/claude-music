@@ -3,6 +3,7 @@
 # https://github.com/tungnt1203/cmusic
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SOCK="${CMUSIC_SOCKET:-${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/cmusic-$(id -u).sock}"
 LOG="${SOCK%.sock}.log"
 
@@ -20,7 +21,8 @@ usage: music.sh <command> [args]
   seek <+s|-s|m:ss>  seek relative (+30, -10) or absolute (1:30, 90)
   replay             restart the current track
   vol [0-100]        set volume, or print it
-  now                print the current track
+  now [--line]       print the current track (--line: one instant line for a statusline)
+  statusline         print the statusLine setting that shows the current track
   stop               stop playback and quit mpv
   doctor             check dependencies
   install            install missing dependencies (mpv, yt-dlp)
@@ -260,11 +262,33 @@ case "$cmd" in
     [ $# -gt 0 ] && ipc "{\"command\":[\"set_property\",\"volume\",$(( ${1%%.*} + 0 ))]}" >/dev/null
     ipc '{"command":["get_property","volume"]}' | sed -n 's/.*"data":\([0-9]*\).*/🔊 \1/p' ;;
   now|status)
+    if [ "${1:-}" = --line ]; then
+      # Statusline: one IPC round trip, no waiting, and silence when nothing plays.
+      IFS=$'\t' read -r t f p pos dur < <(expand $'${media-title}\t${filename}\t${pause}\t${=time-pos:0}\t${=duration:}') || exit 0
+      [ -n "${t:-}" ] || exit 0
+      icon="♪"; [ "$p" = yes ] && icon="⏸"
+      if [ "$t" = "$f" ] || [[ "$t" == ytsearch* ]]; then echo "$icon loading…"; exit 0; fi
+      [ "${#t}" -gt 40 ] && t="${t:0:39}…"
+      if [ -n "$dur" ]; then echo "$icon $t · $(mmss "$pos")/$(mmss "$dur")"; else echo "$icon $t · $(mmss "$pos")"; fi
+      exit 0
+    fi
     running || { echo "⏹ nothing playing"; exit 0; }
     t=$(wait_title) && echo "▶ $t" || echo "▶ loading…" ;;
   stop)
     running && ipc '{"command":["quit"]}' >/dev/null
     rm -f "$SOCK"; echo "⏹ stopped" ;;
+  statusline)
+    # Plugin installs live under a versioned cache dir, so resolve the newest one at run time.
+    case "$SCRIPT_DIR" in
+      */plugins/cache/*) cmd='"$(ls -td ~/.claude/plugins/cache/cmusic/cmusic/*/ | head -1)bin/cmusic" now --line' ;;
+      *) cmd="\"$SCRIPT_DIR/music.sh\" now --line" ;;
+    esac
+    cat <<EOF
+Add to ~/.claude/settings.json:
+  "statusLine": { "type": "command", "command": "$(json_escape "$cmd")" }
+Already have a statusline? Append the output of: $cmd
+EOF
+    ;;
   doctor)
     need_deps; echo "✓ mpv $(mpv --version | head -1 | awk '{print $2}'), yt-dlp $(yt-dlp --version)" ;;
   install)

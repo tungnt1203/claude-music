@@ -72,6 +72,22 @@ cp -r cmusic/skills/music ~/.claude/skills/
 | `/music vol 40` | Chỉnh âm lượng (0–100) |
 | `/music now` | Xem đang phát bài gì |
 
+<details>
+<summary>Hiện bài đang phát trên statusline</summary>
+
+Nhờ Claude *"hiện nhạc lên statusline"*, hoặc thêm vào `~/.claude/settings.json`:
+
+```json
+"statusLine": {
+  "type": "command",
+  "command": "\"$(ls -td ~/.claude/plugins/cache/cmusic/cmusic/*/ | head -1)bin/cmusic\" now --line"
+}
+```
+
+Nó in ra `♪ Nơi này có anh · 1:23/4:10` (`⏸` khi tạm dừng) và không in gì khi không có nhạc. Đã có statusline riêng? Nối thêm output của lệnh trên vào statusline của bạn. `cmusic statusline` in ra đúng lệnh cho cách cài của bạn.
+
+</details>
+
 Khi cài dạng plugin, lệnh sẽ là `/cmusic:music`. Cũng có thể nói tự nhiên: *"bật nhạc lo-fi đi"*, *"tắt nhạc"*.
 
 ## 🔍 Plugin chạy những gì
