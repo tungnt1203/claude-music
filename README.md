@@ -91,6 +91,19 @@ It prints `♪ Nơi này có anh · 1:23/4:10` (`⏸` when paused) and nothing w
 
 </details>
 
+<details>
+<summary>Lower the music while Claude waits for you (opt-in)</summary>
+
+When Claude needs your input (a permission prompt, or it's done and waiting), the music drops to 30% so you notice, and comes back when you reply. Plugin installs only. Turn it on in `~/.claude/settings.json`:
+
+```json
+"env": { "CMUSIC_DUCK": "1" }
+```
+
+`CMUSIC_DUCK_LEVEL` sets how low it goes (percent, default `30`).
+
+</details>
+
 When installed as a plugin, the command is `/cmusic:music`. You can also just say *"play some lo-fi"* or *"stop the music"*.
 
 ## 🔍 What it runs

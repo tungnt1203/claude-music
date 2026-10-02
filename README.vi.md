@@ -91,6 +91,19 @@ Nó in ra `♪ Nơi này có anh · 1:23/4:10` (`⏸` khi tạm dừng) và khô
 
 </details>
 
+<details>
+<summary>Giảm nhạc khi Claude đang chờ bạn (tùy chọn)</summary>
+
+Khi Claude cần bạn trả lời (hỏi quyền, hoặc làm xong và đang chờ), nhạc nhỏ xuống 30% để bạn để ý, rồi to lại khi bạn trả lời. Chỉ có khi cài dạng plugin. Bật trong `~/.claude/settings.json`:
+
+```json
+"env": { "CMUSIC_DUCK": "1" }
+```
+
+`CMUSIC_DUCK_LEVEL` chỉnh mức giảm (phần trăm, mặc định `30`).
+
+</details>
+
 Khi cài dạng plugin, lệnh sẽ là `/cmusic:music`. Cũng có thể nói tự nhiên: *"bật nhạc lo-fi đi"*, *"tắt nhạc"*.
 
 ## 🔍 Plugin chạy những gì

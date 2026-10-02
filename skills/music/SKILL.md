@@ -47,4 +47,5 @@ For `/music` with no argument, or requests like "put something on", "music to fo
 - `install` exit code 3 means the user has to act (usually a sudo password on Linux, or Homebrew missing on macOS). Show the exact command from the output and suggest running it with the `!` prefix, e.g. `! sudo apt-get install -y mpv`, then retry.
 - On failure, the error output points to the mpv log file.
 - `focus` plays focus music, fades out when time is up, sends a desktop notification and plays upbeat music for the break, then stops. `now` shows the time left (🍅 focus, ☕ break). `stop` ends it early.
+- Ducking (plugin hooks, opt-in): if the user wants the music to dip while Claude waits for them, add `"env": {"CMUSIC_DUCK": "1"}` to `~/.claude/settings.json` (merge with any existing `env`); it applies after a restart.
 - Statusline: `cmusic statusline` prints the `statusLine` setting to add to `~/.claude/settings.json`. If the user already has a `statusLine`, don't replace it: append the output of the `now --line` command to their existing script, or ask.

@@ -1,5 +1,5 @@
 -- cmusic.lua — loaded into mpv by music.sh (--script). Runs the parts that must outlive the
--- shell command: fades, timers and radio. music.sh talks to it with `script-message cmusic-*`
+-- shell command: fades, timers, radio and ducking. music.sh talks to it with `script-message cmusic-*`
 -- and reads its state from `user-data/cmusic/*`.
 
 local FADE_IN, FADE_OUT, FADE_SLEEP = 1.5, 1.0, 10
@@ -25,6 +25,10 @@ local function fade(to, secs, done)
     end)
 end
 
+-- While Claude waits for the user (Notification hook), play at `duck_ratio` of the level.
+local ducked, duck_ratio = false, 0.3
+local function target() return ducked and level * duck_ratio or level end
+
 local function set_level(v)
     level = math.max(0, math.min(130, v))
     publish("level", math.floor(level + 0.5))
@@ -40,14 +44,23 @@ end)
 mp.register_event("playback-restart", function()
     if pending_fade_in then
         pending_fade_in = false
-        fade(level, FADE_IN)
+        fade(target(), FADE_IN)
     end
 end)
 
 mp.register_script_message("cmusic-volume", function(v)
     if fade_timer then fade_timer:kill(); fade_timer = nil end
+    ducked = false -- setting the volume means the user is back
     set_level(tonumber(v) or level)
     mp.set_property_number("volume", level)
+end)
+
+mp.register_script_message("cmusic-duck", function(percent)
+    duck_ratio = math.max(0, math.min(100, tonumber(percent) or 30)) / 100
+    if not ducked and not mp.get_property_bool("pause") then ducked = true; fade(target(), 0.6) end
+end)
+mp.register_script_message("cmusic-unduck", function()
+    if ducked then ducked = false; fade(target(), 0.6) end
 end)
 
 local function fade_quit(secs) fade(0, secs, function() mp.command("quit") end) end

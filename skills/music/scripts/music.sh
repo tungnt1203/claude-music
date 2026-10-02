@@ -29,6 +29,7 @@ usage: music.sh <command> [args]
   radio <query|url>  start a radio from a song
   focus [min] [break <min>] [query]
                      Pomodoro: focus music for 25 min, then a 5 min break
+  hook <event>       for Claude Code hooks (notify, prompt, tool); opt-in via CMUSIC_DUCK=1
   doctor             check dependencies
   install            install missing dependencies (mpv, yt-dlp)
 EOF
@@ -379,6 +380,14 @@ Add to ~/.claude/settings.json:
 Already have a statusline? Append the output of: $cmd
 EOF
     ;;
+  hook)
+    # Runs on every Notification / UserPromptSubmit / PostToolUse, so bail out fast.
+    [ "${CMUSIC_DUCK:-0}" = 1 ] && [ -S "$SOCK" ] || exit 0
+    case "${1:-}" in
+      notify) ipc "{\"command\":[\"script-message\",\"cmusic-duck\",\"${CMUSIC_DUCK_LEVEL:-30}\"]}" >/dev/null ;;
+      prompt|tool) ipc '{"command":["script-message","cmusic-unduck"]}' >/dev/null ;;
+    esac
+    exit 0 ;;
   doctor)
     need_deps; echo "✓ mpv $(mpv --version | head -1 | awk '{print $2}'), yt-dlp $(yt-dlp --version)" ;;
   install)
