@@ -92,15 +92,18 @@ It prints `♪ Nơi này có anh · 1:23/4:10` (`⏸` when paused) and nothing w
 </details>
 
 <details>
-<summary>Lower the music while Claude waits for you (opt-in)</summary>
+<summary>Audio cues from Claude: duck while it waits, swell when it's done (opt-in)</summary>
 
-When Claude needs your input (a permission prompt, or it's done and waiting), the music drops to 30% so you notice, and comes back when you reply. Plugin installs only. Turn it on in `~/.claude/settings.json`:
+- **Duck**: when Claude needs your input (a permission prompt, or it's done and waiting), the music drops to 30% so you notice, and comes back when you reply.
+- **Swell**: when Claude finishes a task that took over a minute, the music briefly swells.
+
+Plugin installs only. Turn them on in `~/.claude/settings.json`:
 
 ```json
-"env": { "CMUSIC_DUCK": "1" }
+"env": { "CMUSIC_DUCK": "1", "CMUSIC_CELEBRATE": "1" }
 ```
 
-`CMUSIC_DUCK_LEVEL` sets how low it goes (percent, default `30`).
+`CMUSIC_DUCK_LEVEL` sets how low it goes (percent, default `30`); `CMUSIC_CELEBRATE_AFTER` sets what counts as a long task (seconds, default `60`).
 
 </details>
 

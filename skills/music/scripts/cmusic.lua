@@ -1,5 +1,5 @@
 -- cmusic.lua — loaded into mpv by music.sh (--script). Runs the parts that must outlive the
--- shell command: fades, timers, radio and ducking. music.sh talks to it with `script-message cmusic-*`
+-- shell command: fades, timers, radio, ducking and the end-of-task swell. music.sh talks to it with `script-message cmusic-*`
 -- and reads its state from `user-data/cmusic/*`.
 
 local FADE_IN, FADE_OUT, FADE_SLEEP = 1.5, 1.0, 10
@@ -61,6 +61,18 @@ mp.register_script_message("cmusic-duck", function(percent)
 end)
 mp.register_script_message("cmusic-unduck", function()
     if ducked then ducked = false; fade(target(), 0.6) end
+end)
+
+-- End-of-task swell (Stop hook): briefly raise the volume if the turn took `min_secs` or more.
+local turn_start
+mp.register_script_message("cmusic-turn-start", function() turn_start = os.time() end)
+mp.register_script_message("cmusic-celebrate", function(min_secs)
+    local long = turn_start and os.time() - turn_start >= (tonumber(min_secs) or 60)
+    turn_start = nil
+    if not long or ducked or fade_timer or mp.get_property_bool("pause") then return end
+    fade(math.min(130, level * 1.4, level + 25), 0.8, function()
+        mp.add_timeout(1.5, function() if not fade_timer then fade(target(), 1.5) end end)
+    end)
 end)
 
 local function fade_quit(secs) fade(0, secs, function() mp.command("quit") end) end

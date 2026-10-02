@@ -1,14 +1,45 @@
 {
-  "description": "Opt-in: lower the music while Claude waits for you (CMUSIC_DUCK=1)",
+  "description": "Opt-in: lower the music while Claude waits for you (CMUSIC_DUCK=1), swell it when a long task finishes (CMUSIC_CELEBRATE=1)",
   "hooks": {
     "Notification": [
-      { "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/bin/cmusic\" hook notify" }] }
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/bin/cmusic\" hook notify"
+          }
+        ]
+      }
     ],
     "UserPromptSubmit": [
-      { "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/bin/cmusic\" hook prompt" }] }
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/bin/cmusic\" hook prompt"
+          }
+        ]
+      }
     ],
     "PostToolUse": [
-      { "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/bin/cmusic\" hook tool" }] }
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/bin/cmusic\" hook tool"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/bin/cmusic\" hook stop"
+          }
+        ]
+      }
     ]
   }
 }

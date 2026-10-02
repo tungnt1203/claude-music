@@ -92,15 +92,18 @@ Nó in ra `♪ Nơi này có anh · 1:23/4:10` (`⏸` khi tạm dừng) và khô
 </details>
 
 <details>
-<summary>Giảm nhạc khi Claude đang chờ bạn (tùy chọn)</summary>
+<summary>Tín hiệu âm thanh từ Claude: nhỏ lại khi chờ, to lên khi xong việc (tùy chọn)</summary>
 
-Khi Claude cần bạn trả lời (hỏi quyền, hoặc làm xong và đang chờ), nhạc nhỏ xuống 30% để bạn để ý, rồi to lại khi bạn trả lời. Chỉ có khi cài dạng plugin. Bật trong `~/.claude/settings.json`:
+- **Nhỏ lại**: khi Claude cần bạn trả lời (hỏi quyền, hoặc làm xong và đang chờ), nhạc nhỏ xuống 30% để bạn để ý, rồi to lại khi bạn trả lời.
+- **To lên**: khi Claude làm xong một việc mất hơn một phút, nhạc to lên một chút rồi trở lại.
+
+Chỉ có khi cài dạng plugin. Bật trong `~/.claude/settings.json`:
 
 ```json
-"env": { "CMUSIC_DUCK": "1" }
+"env": { "CMUSIC_DUCK": "1", "CMUSIC_CELEBRATE": "1" }
 ```
 
-`CMUSIC_DUCK_LEVEL` chỉnh mức giảm (phần trăm, mặc định `30`).
+`CMUSIC_DUCK_LEVEL` chỉnh mức giảm (phần trăm, mặc định `30`); `CMUSIC_CELEBRATE_AFTER` chỉnh bao lâu thì tính là việc dài (giây, mặc định `60`).
 
 </details>
 
