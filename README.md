@@ -79,6 +79,25 @@ cp -r cmusic/skills/music ~/.claude/skills/
 | `/music stop in 30m` | Sleep timer, with a gentle fade-out (`stop after this` waits for the song to end) |
 
 <details>
+<summary>Lyrics under the prompt, karaoke style (cmusic-lyrics plugin)</summary>
+
+A second plugin in this marketplace shows the current track and the line being sung, right under the prompt, while music plays:
+
+```
+♪ Mất Trí Nhớ - Chi Dân | Official… · 2:54/5:06 · 🎤 <the line being sung>
+```
+
+`/lyrics` opens a pane beside the transcript with the lyrics around that line, the current one highlighted.
+
+```
+/plugin install cmusic-lyrics@cmusic
+```
+
+It needs the cmusic plugin (0.5.1+) and a Claude Code version with plugin function hooks (an early-access feature). Lyrics come from [lrclib.net](https://lrclib.net).
+
+</details>
+
+<details>
 <summary>Show the current track in the statusline</summary>
 
 Ask Claude to *"show the music in my statusline"*, or add this to `~/.claude/settings.json`:
