@@ -25,6 +25,8 @@ usage: music.sh <command> [args]
   statusline         print the statusLine setting that shows the current track
   stop               stop playback and quit mpv (fades out)
   stop in <30m|1h>   sleep timer; also: stop after this (end of track), stop cancel
+  focus [min] [break <min>] [query]
+                     Pomodoro: focus music for 25 min, then a 5 min break
   doctor             check dependencies
   install            install missing dependencies (mpv, yt-dlp)
 EOF
@@ -338,6 +340,20 @@ case "$cmd" in
     fi
     running && ipc '{"command":["quit"]}' >/dev/null
     rm -f "$SOCK"; echo "⏹ stopped" ;;
+  focus|pomodoro)
+    need_deps
+    focus=1500 brk=300
+    if [ $# -gt 0 ] && secs=$(dur_secs "$1"); then focus=$secs; shift; fi
+    if [ "${1:-}" = break ] && [ $# -gt 1 ]; then
+      if [ "$2" = 0 ] || [ "$2" = off ]; then brk=0; else brk=$(dur_secs "$2") || { echo "✗ bad break length: $2" >&2; exit 1; }; fi
+      shift 2
+    fi
+    query="${*:-${CMUSIC_FOCUS_QUERY:-lofi hip hop instrumental focus mix}}"
+    start "$query" "$(source_for "$query" | cut -f1)"
+    for _ in $(seq 1 20); do lua_ready && break; sleep 0.25; done
+    lua_ready || { echo "✗ focus mode needs mpv >= 0.36 with Lua (see: doctor)" >&2; exit 1; }
+    ipc "{\"command\":[\"script-message\",\"cmusic-focus\",\"$focus\",\"$brk\",\"$(json_escape "${CMUSIC_BREAK_QUERY:-upbeat feel good songs mix}")\"]}" >/dev/null
+    if [ "$brk" -gt 0 ]; then echo "🍅 focus for $(mmss "$focus"), then a $(mmss "$brk") break"; else echo "🍅 focus for $(mmss "$focus")"; fi ;;
   statusline)
     # Plugin installs live under a versioned cache dir, so resolve the newest one at run time.
     case "$SCRIPT_DIR" in

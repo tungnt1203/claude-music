@@ -93,5 +93,39 @@ end)
 
 mp.register_script_message("cmusic-timer-off", clear_timer)
 
+-- Focus / Pomodoro -----------------------------------------------------------------------
+
+-- Desktop notification with a chime, best effort (macOS osascript, Linux notify-send).
+local function notify(text)
+    local args
+    local ok = os.execute("command -v osascript >/dev/null 2>&1")
+    if ok == true or ok == 0 then -- Lua 5.1/LuaJIT return a status code, 5.2+ a boolean
+        args = { "osascript", "-e", ('display notification "%s" with title "cmusic" sound name "Glass"'):format(text) }
+    else
+        args = { "notify-send", "cmusic", text }
+    end
+    mp.command_native_async({ name = "subprocess", args = args, playback_only = false }, function() end)
+end
+
+-- `focus 25`: focus music for 25 minutes, fade out, then (optionally) break music, then stop.
+mp.register_script_message("cmusic-focus", function(focus_secs, break_secs, break_query)
+    focus_secs, break_secs = tonumber(focus_secs) or 1500, tonumber(break_secs) or 0
+    set_timer("🍅", focus_secs, FADE_SLEEP, function()
+        fade(0, FADE_SLEEP, function()
+            if break_secs <= 0 then
+                notify("Focus session done. Nice work!")
+                mp.command("quit")
+                return
+            end
+            notify(("Break time! %d minutes."):format(math.floor(break_secs / 60 + 0.5)))
+            mp.commandv("loadfile", "ytdl://ytsearch1:" .. break_query, "replace")
+            set_timer("☕", break_secs, FADE_SLEEP, function()
+                notify("Break's over. Back to it!")
+                fade_quit(FADE_SLEEP)
+            end)
+        end)
+    end)
+end)
+
 set_level(level)
 publish("ready", "yes")

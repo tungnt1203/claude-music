@@ -71,6 +71,7 @@ cp -r cmusic/skills/music ~/.claude/skills/
 | `/music seek +30` · `seek 1:30` · `replay` | Jump within the track |
 | `/music vol 40` | Set the volume (0–100) |
 | `/music now` | Show what's playing |
+| `/music focus 25` | Pomodoro: 25 min of focus music, a notification, then a 5 min break (`focus 50 break 10`) |
 | `/music stop in 30m` | Sleep timer, with a gentle fade-out (`stop after this` waits for the song to end) |
 
 <details>

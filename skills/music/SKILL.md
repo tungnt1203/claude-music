@@ -24,6 +24,7 @@ Control playback with the `cmusic` command. It is on PATH when cmusic is install
 | stop | `cmusic stop` |
 | sleep timer / stop when this song ends / cancel it | `cmusic stop in 30m` · `stop after this` · `stop cancel` |
 | show the track in Claude Code's statusline | `cmusic statusline` (see Notes) |
+| Pomodoro / focus session | `cmusic focus` (25 min + 5 min break) · `focus 50 break 10` · `focus 25 break 0 "jazz piano"` |
 | check setup | `cmusic doctor` |
 | install mpv / yt-dlp | `cmusic install` |
 
@@ -43,4 +44,5 @@ For `/music` with no argument, or requests like "put something on", "music to fo
 - Exit code 2 means mpv or yt-dlp is missing. Say in one line that you're installing them, run `cmusic install` (it can take a minute or two), then retry the original command. Don't ask first: the user asked for music, and Claude Code's permission prompt already gates the install.
 - `install` exit code 3 means the user has to act (usually a sudo password on Linux, or Homebrew missing on macOS). Show the exact command from the output and suggest running it with the `!` prefix, e.g. `! sudo apt-get install -y mpv`, then retry.
 - On failure, the error output points to the mpv log file.
+- `focus` plays focus music, fades out when time is up, sends a desktop notification and plays upbeat music for the break, then stops. `now` shows the time left (🍅 focus, ☕ break). `stop` ends it early.
 - Statusline: `cmusic statusline` prints the `statusLine` setting to add to `~/.claude/settings.json`. If the user already has a `statusLine`, don't replace it: append the output of the `now --line` command to their existing script, or ask.
