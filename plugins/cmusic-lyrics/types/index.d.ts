@@ -7,6 +7,8 @@ export type Track = {
   duration: number
   /** lrclib lookup state: loading | ok | none | error */
   lyrics: string
+  /** seconds the lyrics run late on this track (`cmusic lyrics offset`) */
+  offset: number
 }
 
 /** One synced lyric line: when it starts (seconds) and its words. */

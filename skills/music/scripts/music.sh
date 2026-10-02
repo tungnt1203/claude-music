@@ -33,6 +33,9 @@ usage: music.sh <command> [args]
   radio [on|off]     keep playing related songs when the queue runs out
   radio <query|url>  start a radio from a song
   lyrics [--line]    lyrics of the current track from lrclib.net (--line: the line being sung)
+  lyrics offset [+s|-s|s]
+                     shift the synced lyrics on this track: +5 = 5 s later (they run
+                     ahead, e.g. a music video with an intro), -5 = earlier, 0 = reset
   focus [min] [break <min>] [query]
                      Pomodoro: focus music for 25 min, then a 5 min break
   fav / unfav        save / remove the current track in your favorites
@@ -350,16 +353,16 @@ case "$cmd" in
     if [ "${1:-}" = --json ]; then
       # For the lyrics pane: one object per call, {} when nothing plays. --lrc adds the
       # synced lyrics. Like --line --lyrics, it starts a lyrics lookup for a new track.
-      fields='${media-title}\x1f${filename}\x1f${pause}\x1f${=time-pos:0}\x1f${=duration:0}\x1f${path}\x1f${user-data/cmusic/lyrics-status:}'
+      fields='${media-title}\x1f${filename}\x1f${pause}\x1f${=time-pos:0}\x1f${=duration:0}\x1f${path}\x1f${user-data/cmusic/lyrics-status:}\x1f${user-data/cmusic/lyrics-offset:0}'
       [ "${2:-}" = --lrc ] && fields+='\x1f${user-data/cmusic/lyrics-lrc:}'
-      IFS=$'\x1f' read -r -d '' t f p pos dur path lst lrc < <(expand "$(printf "$fields")") || true
+      IFS=$'\x1f' read -r -d '' t f p pos dur path lst off lrc < <(expand "$(printf "$fields")") || true
       [ -n "${t:-}" ] || { echo "{}"; exit 0; }
-      lst=${lst%$'\n'} lrc=${lrc%$'\n'}
+      lst=${lst%$'\n'} off=${off%$'\n'} lrc=${lrc%$'\n'}
       [ -z "$lst" ] && ipc '{"command":["script-message","cmusic-lyrics"]}' >/dev/null
       loading=false; { [ "$t" = "$f" ] || [[ "$t" == ytsearch* ]]; } && loading=true
-      printf '{"title":"%s","loading":%s,"paused":%s,"pos":%s,"duration":%s,"path":"%s","lyrics":"%s"' \
+      printf '{"title":"%s","loading":%s,"paused":%s,"pos":%s,"duration":%s,"path":"%s","lyrics":"%s","offset":%s' \
         "$(json_escape "$t")" "$loading" "$([ "$p" = yes ] && echo true || echo false)" "${pos:-0}" "${dur:-0}" \
-        "$(json_escape "$path")" "${lst:-loading}"
+        "$(json_escape "$path")" "${lst:-loading}" "${off:-0}"
       [ "${2:-}" = --lrc ] && printf ',"lrc":"%s"' "$(json_escape "$lrc")"
       echo "}"; exit 0
     fi
@@ -418,6 +421,21 @@ case "$cmd" in
   lyrics)
     running || { echo "⏹ nothing playing"; exit 0; }
     lua_ready || { echo "✗ lyrics need mpv >= 0.36 with Lua (see: doctor)" >&2; exit 1; }
+    if [ "${1:-}" = offset ]; then
+      off=$(expand '${user-data/cmusic/lyrics-offset:0}')
+      if [ $# -gt 1 ]; then
+        [[ "$2" =~ ^[+-]?[0-9]+(\.[0-9]+)?$ ]] || { echo "usage: lyrics offset +5 | -5 | 0" >&2; exit 1; }
+        ipc "{\"command\":[\"script-message\",\"cmusic-lyrics-offset\",\"$2\"]}" >/dev/null
+        # cmusic.lua applies it asynchronously: wait for the new value.
+        for _ in $(seq 1 10); do
+          new=$(expand '${user-data/cmusic/lyrics-offset:0}'); [ "$new" != "$off" ] && break; sleep 0.05
+        done
+        off=$new
+      fi
+      case "$off" in 0) echo "🎤 lyrics in sync with the track (offset 0)" ;;
+        -*) echo "🎤 lyrics ${off#-}s earlier" ;; *) echo "🎤 lyrics ${off}s later" ;; esac
+      exit 0
+    fi
     wait_title >/dev/null || { echo "▶ still loading, try again in a few seconds"; exit 0; }
     ipc '{"command":["script-message","cmusic-lyrics"]}' >/dev/null
     for _ in $(seq 1 60); do

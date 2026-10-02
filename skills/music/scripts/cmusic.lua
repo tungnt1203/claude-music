@@ -202,8 +202,12 @@ end)
 -- `lyrics`: look the current track up on lrclib.net (free, no key). Publishes
 -- lyrics-status (loading|ok|none|error), lyrics (plain text) and, for synced lyrics,
 -- lyrics-line (the line being sung) and lyrics-lrc ("<seconds>\t<line>" per line).
+-- lyrics-offset: how many seconds late the lyrics run on this track, set by hand (a music
+-- video often opens with a scene the audio release doesn't have). lyrics-lrc stays as
+-- lrclib gave it: readers shift it themselves.
 local utils = require "mp.utils"
 local lyrics_cache, synced, line_observer = {}, nil, nil
+local offsets, offset = {}, 0 -- per track (path), for this mpv session
 
 -- "NƠI NÀY CÓ ANH | OFFICIAL MUSIC VIDEO | SƠN TÙNG M-TP" -> "NƠI NÀY CÓ ANH SƠN TÙNG M-TP"
 local function ci(word) return (word:gsub("%a", function(c) return "[" .. c:lower() .. c:upper() .. "]" end)) end
@@ -249,7 +253,7 @@ local function show(entry)
     line_observer = function(_, pos)
         if not pos then return end
         local text = ""
-        for _, l in ipairs(synced) do if l.t <= pos + 0.3 then text = l.text else break end end
+        for _, l in ipairs(synced) do if l.t + offset <= pos + 0.3 then text = l.text else break end end
         if text ~= current then current = text; publish("lyrics-line", text) end
     end
     mp.observe_property("time-pos", "number", line_observer)
@@ -362,6 +366,17 @@ local function lookup()
 end
 
 mp.register_script_message("cmusic-lyrics", lookup)
+
+-- "+5" / "-5": move the lyrics 5 s later / earlier. "5": set the offset. "0": reset.
+mp.register_script_message("cmusic-lyrics-offset", function(arg)
+    local path, n = mp.get_property("path"), tonumber((arg or ""):match("^[+-]?([%d.]+)$"))
+    if not path or not n then return end
+    if arg:sub(1, 1) == "-" then n = -n end
+    offset = arg:match("^[+-]") and offset + n or n
+    offsets[path] = offset ~= 0 and offset or nil
+    publish("lyrics-offset", ("%g"):format(offset))
+    if line_observer then line_observer(nil, mp.get_property_number("time-pos")) end
+end)
 mp.register_event("file-loaded", function()
     track_loaded = true
     if lookup_waiting then lookup_waiting = false; lookup() end
@@ -369,6 +384,8 @@ end)
 
 mp.register_event("start-file", function()
     track_loaded, lookup_waiting = false, false
+    offset = offsets[mp.get_property("path")] or 0
+    publish("lyrics-offset", ("%g"):format(offset))
     stop_line_observer()
     publish("lyrics-status", "")
     publish("lyrics", "")
