@@ -35,11 +35,22 @@ Control playback with the `cmusic` command. It is on PATH when cmusic is install
 
 ## When Claude picks the music
 
-For `/music` with no argument, or requests like "put something on", "music to focus", "I'm sad":
-- Choose from the mood and context: long coding or debugging sessions get lo-fi, instrumental or ambient; late night gets something calm; an explicit mood wins.
-- Use specific queries (song + artist). For long listening, a mix works, e.g. `"lofi hip hop mix 1 hour"`.
+For `/music` with no argument, or requests like "put something on", "music to focus", "I'm sad", pick from the signals you already have. Don't run extra commands to sense context, except `date +%H` for the time of day.
+
+1. **An explicit mood or genre wins.** "I'm sad" or "play some jazz" decides it.
+2. **What the session is doing** (from the conversation so far):
+   - debugging: failing tests, stack traces, "why is this broken" → steady, lyric-free lo-fi or chillhop
+   - a big refactor or long build: long instrumental mixes (post-rock, ambient, video game OSTs)
+   - writing docs, a README or a PR description: soft piano, acoustic, light jazz
+   - shipping or celebrating: tests just passed, a PR merged → something upbeat
+   - a new project or brainstorming: energetic electronic or synthwave
+3. **Time of day** (`date +%H`): late night (22–05) → calm and ambient; morning (06–10) → bright and upbeat; afternoon slump → something with energy.
+4. **Language and locale.** If the user writes in Vietnamese, V-pop (e.g. Sơn Tùng M-TP, Đen, Hoàng Dũng, Vũ.) is a good option, or a Vietnamese lo-fi mix. Same idea for other languages. Still favor instrumental music while they code.
+
+Then:
+- Use specific queries (song + artist). For long listening, a mix works, e.g. `"lofi hip hop mix 1 hour"`. For non-stop music in one vibe, `cmusic radio "<seed song>"`.
 - Optionally `play` one track and `add` 2–3 with the same vibe.
-- Say in one short line why you picked it.
+- Say in one short line why you picked it, naming the signal: "Late night and you're chasing a flaky test, so calm lo-fi."
 
 ## Notes
 - Keep replies short: relay the command's output line (▶ title) and little else. Reply in the user's language.
