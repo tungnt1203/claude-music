@@ -23,6 +23,7 @@ usage: music.sh <command> [args]
   seek <+s|-s|m:ss>  seek relative (+30, -10) or absolute (1:30, 90)
   replay             restart the current track
   vol [0-100]        set volume, or print it
+  now --json [--lrc] track state as JSON, for the lyrics pane
   now [--line [--lyrics]]
                      print the current track (--line: instant, for a statusline;
                      --lyrics: add the line being sung, fetched from lrclib.net)
@@ -346,6 +347,22 @@ case "$cmd" in
     fi
     v=$(expand '${user-data/cmusic/level:${volume}}'); echo "🔊 ${v%%.*}" ;;
   now|status)
+    if [ "${1:-}" = --json ]; then
+      # For the lyrics pane: one object per call, {} when nothing plays. --lrc adds the
+      # synced lyrics. Like --line --lyrics, it starts a lyrics lookup for a new track.
+      fields='${media-title}\x1f${filename}\x1f${pause}\x1f${=time-pos:0}\x1f${=duration:0}\x1f${path}\x1f${user-data/cmusic/lyrics-status:}'
+      [ "${2:-}" = --lrc ] && fields+='\x1f${user-data/cmusic/lyrics-lrc:}'
+      IFS=$'\x1f' read -r -d '' t f p pos dur path lst lrc < <(expand "$(printf "$fields")") || true
+      [ -n "${t:-}" ] || { echo "{}"; exit 0; }
+      lst=${lst%$'\n'} lrc=${lrc%$'\n'}
+      [ -z "$lst" ] && ipc '{"command":["script-message","cmusic-lyrics"]}' >/dev/null
+      loading=false; { [ "$t" = "$f" ] || [[ "$t" == ytsearch* ]]; } && loading=true
+      printf '{"title":"%s","loading":%s,"paused":%s,"pos":%s,"duration":%s,"path":"%s","lyrics":"%s"' \
+        "$(json_escape "$t")" "$loading" "$([ "$p" = yes ] && echo true || echo false)" "${pos:-0}" "${dur:-0}" \
+        "$(json_escape "$path")" "${lst:-loading}"
+      [ "${2:-}" = --lrc ] && printf ',"lrc":"%s"' "$(json_escape "$lrc")"
+      echo "}"; exit 0
+    fi
     if [ "${1:-}" = --line ]; then
       # Statusline: one IPC round trip, no waiting, and silence when nothing plays.
       # Fields are split on \x1f: a tab separator would merge empty fields.
