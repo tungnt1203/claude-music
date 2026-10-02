@@ -3,8 +3,11 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { Line, Track } from '../types'
 
-// cmusic's current track and the lyric being sung, as one status line under the prompt
-// while music plays. /lyrics opens a pane beside the transcript with the lyrics around it.
+// While music plays, three rows under the prompt, above Claude Code's own hint line:
+//   🎵  Mất Trí Nhớ — Chi Dân
+//       ━━━━━━━━━━━●━━━━━━  2:38 / 5:06
+//       🎤 Không thể nào nhớ những gì
+// Nothing when idle. /lyrics opens a pane beside the transcript with the lyrics around it.
 
 const PANE = 'cmusic-lyrics'
 const POLL_MS = 700
@@ -59,7 +62,6 @@ const st = {
   lastSearch: -Infinity,
   lrcPath: '', // the track whose lyrics `lines` holds
   isPolling: false,
-  lastStatus: '',
 }
 
 // The index of the line being sung at `pos`, or -1 before the first.
@@ -71,18 +73,24 @@ function currentLine(lyric: readonly Line[], pos: number): number {
   return current
 }
 
-function statusText(t: Track, lyric: readonly Line[]): string {
-  const title = t.isLoading ? 'Loading…' : t.title.length > 32 ? `${t.title.slice(0, 31)}…` : t.title
-  const time = t.duration > 0 ? `${mmss(t.pos)}/${mmss(t.duration)}` : mmss(t.pos)
-  const line = lyric[currentLine(lyric, t.pos)]?.text
-  return `${t.isPaused ? '⏸' : '♪'} ${title} · ${time}${line ? ` · 🎤 ${line}` : ''}`
+// "Mất Trí Nhớ - Chi Dân | Official Music Video" -> "Mất Trí Nhớ — Chi Dân":
+// drop (…) / […] and "|" segments of video noise, keep the first and last real ones.
+const NOISE = /official|music video|lyrics?|visuali[sz]er|audio|\bm\/?v\b|\b4k\b|\bhd\b|remaster/i
+function cleanTitle(title: string): string {
+  const parts = title
+    .replace(/\([^)]*\)|\[[^\]]*\]|【[^】]*】/g, ' ')
+    .split(/[|｜]/)
+    .map(part => part.replace(/\s+/g, ' ').trim())
+    .filter(part => part !== '' && !NOISE.test(part))
+  const head = parts[0] ?? title.trim()
+  const last = parts.length > 1 ? parts[parts.length - 1] : undefined
+  return (last ? `${head} — ${last}` : head).replace(/ - /g, ' — ')
 }
 
-// Pin the line under the prompt, only when it changed.
-function setStatus($: EngineInterface, text: string | undefined): void {
-  if ((text ?? '') === st.lastStatus) return
-  st.lastStatus = text ?? ''
-  $.ui.status(text)
+// ━━━━●━━━━ with `width` cells; the played part and the knob in the accent color.
+function progress(pos: number, duration: number, width: number): { done: string; rest: string } {
+  const at = duration > 0 ? Math.min(width - 1, Math.floor((pos / duration) * width)) : 0
+  return { done: '━'.repeat(at) + '●', rest: '━'.repeat(Math.max(0, width - at - 1)) }
 }
 
 async function cmusic($: EngineInterface, args: string[]): Promise<NowJson | null> {
@@ -116,7 +124,6 @@ async function poll($: EngineInterface): Promise<void> {
 
     if (!now.title) {
       await update($, track, () => null)
-      setStatus($, undefined)
       return
     }
 
@@ -143,7 +150,6 @@ async function poll($: EngineInterface): Promise<void> {
       lyrics: now.lyrics ?? 'loading',
     }
     await update($, track, () => next)
-    setStatus($, statusText(next, await read($, lines)))
   } finally {
     st.isPolling = false
   }
@@ -161,6 +167,41 @@ export const register: Register = on => {
     const opened = await $.ui.open({ id: PANE, title: '♪ cmusic' })
 
     return { text: opened.isPlaced ? 'Lyrics pane opened.' : `Lyrics pane is waiting: ${opened.reason}` }
+  })
+
+  on('ui.render', { component: 'PromptHint' }, async ($, e, next) => {
+    const t = await read($, track)
+    const engineLine = await next(e)
+    if (!t) return engineLine
+
+    const { Box, Text } = $.ui.resolve(e)
+    const lyric = await read($, lines)
+    const width = Math.max(10, Math.min(30, (e.viewport?.columns ?? 80) - 24))
+    const bar = progress(t.pos, t.duration, width)
+    const time = t.duration > 0 ? `${mmss(t.pos)} / ${mmss(t.duration)}` : mmss(t.pos)
+    const line = t.isPaused ? undefined : lyric[currentLine(lyric, t.pos)]?.text
+
+    return (
+      <Box flexDirection="column">
+        <Text bold wrap="truncate-end">
+          {t.isPaused ? '⏸ ' : '🎵 '} {t.isLoading ? 'Loading…' : cleanTitle(t.title)}
+        </Text>
+        <Text wrap="truncate-end">
+          {'    '}
+          <Text color="cyan">{bar.done}</Text>
+          <Text dimColor>{bar.rest}</Text>
+          {'  '}
+          {time}
+        </Text>
+        {line ? (
+          <Text dimColor wrap="truncate-end">
+            {'    🎤 '}
+            {line}
+          </Text>
+        ) : null}
+        {engineLine}
+      </Box>
+    )
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {

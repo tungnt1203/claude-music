@@ -15,7 +15,7 @@
     {
       "name": "cmusic-lyrics",
       "source": "./plugins/cmusic-lyrics",
-      "description": "Shows cmusic's current track and the lyric being sung under the prompt; /lyrics opens a karaoke pane. Needs the cmusic plugin."
+      "description": "Shows cmusic's track, a progress bar and the lyric being sung under the prompt; /lyrics opens a karaoke pane. Needs the cmusic plugin."
     }
   ]
 }
