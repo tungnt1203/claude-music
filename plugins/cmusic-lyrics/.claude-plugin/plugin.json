@@ -1,0 +1,21 @@
+{
+  "name": "cmusic-lyrics",
+  "displayName": "cmusic lyrics",
+  "version": "0.1.0",
+  "description": "Shows cmusic's current track and the lyric being sung under the prompt; /lyrics opens a karaoke pane.",
+  "author": {
+    "name": "tungnt1203",
+    "email": "tung.nguyen120301@gmail.com",
+    "url": "https://github.com/tungnt1203"
+  },
+  "homepage": "https://github.com/tungnt1203/cmusic",
+  "repository": "https://github.com/tungnt1203/cmusic",
+  "license": "MIT",
+  "keywords": [
+    "music",
+    "lyrics",
+    "karaoke",
+    "statusline"
+  ],
+  "types": "./types/index.d.ts"
+}

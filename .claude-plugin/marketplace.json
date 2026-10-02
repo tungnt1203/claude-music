@@ -11,6 +11,11 @@
       "name": "cmusic",
       "source": "./",
       "description": "Background music for Claude Code: play YouTube audio with /music, or let Claude pick songs for your mood."
+    },
+    {
+      "name": "cmusic-lyrics",
+      "source": "./plugins/cmusic-lyrics",
+      "description": "Shows cmusic's current track and the lyric being sung under the prompt; /lyrics opens a karaoke pane. Needs the cmusic plugin."
     }
   ]
 }

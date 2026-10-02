@@ -79,6 +79,25 @@ cp -r cmusic/skills/music ~/.claude/skills/
 | `/music stop in 30m` | Hẹn giờ tắt nhạc, nhỏ dần rồi tắt (`stop after this`: tắt khi hết bài) |
 
 <details>
+<summary>Lời bài hát dưới ô nhập, kiểu karaoke (plugin cmusic-lyrics)</summary>
+
+Một plugin thứ hai trong marketplace này hiện tên bài và câu đang hát ngay dưới ô nhập khi có nhạc:
+
+```
+♪ Mất Trí Nhớ - Chi Dân | Official… · 2:54/5:06 · 🎤 <câu đang hát>
+```
+
+Gõ `/lyrics` để mở một pane bên cạnh cuộc trò chuyện, hiện lời quanh câu đó và tô sáng câu đang hát.
+
+```
+/plugin install cmusic-lyrics@cmusic
+```
+
+Cần plugin cmusic (0.5.1 trở lên) và bản Claude Code có function hooks cho plugin (tính năng early access). Lời bài hát lấy từ [lrclib.net](https://lrclib.net).
+
+</details>
+
+<details>
 <summary>Hiện bài đang phát trên statusline</summary>
 
 Nhờ Claude *"hiện nhạc lên statusline"*, hoặc thêm vào `~/.claude/settings.json`:
