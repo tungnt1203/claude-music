@@ -86,11 +86,19 @@ Ask Claude to *"show the music in my statusline"*, or add this to `~/.claude/set
 ```json
 "statusLine": {
   "type": "command",
-  "command": "\"$(ls -td ~/.claude/plugins/cache/cmusic/cmusic/*/ | head -1)bin/cmusic\" now --line"
+  "command": "\"$(ls -td ~/.claude/plugins/cache/cmusic/cmusic/*/ | head -1)bin/cmusic\" now --line --lyrics",
+  "refreshInterval": 1
 }
 ```
 
-It prints `♪ Nơi này có anh · 1:23/4:10` (`⏸` when paused) and nothing when no music is playing. Already have a statusline? Append the output of that command to yours. `cmusic statusline` prints the right command for your install.
+It shows the track, and below it the lyric line being sung, updated every second:
+
+```
+♪ Nơi này có anh · 1:11/4:38
+🎤 Gió mang câu tình ca, ngàn ánh sao vụt qua, nhẹ ôm lấy em
+```
+
+`⏸` shows when paused, and nothing shows when no music is playing. Drop `--lyrics` to show only the track (and skip the lyrics lookup on lrclib.net). Already have a statusline? Append the output of that command to yours. `cmusic statusline` prints the right command for your install.
 
 </details>
 
