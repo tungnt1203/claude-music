@@ -63,7 +63,7 @@ cp -r cmusic/skills/music ~/.claude/skills/
 
 | Command | What it does |
 |---|---|
-| `/music <song>` | Play a song by name, or play a link |
+| `/music <song>` | Play a song by name (its official audio, so the lyrics line up; add `mv` or `live` for the video), or play a link |
 | `/music` | Let Claude pick for your mood |
 | `/music add <song>` | Add to the queue |
 | `/music radio <song>` | Start a radio: related songs keep playing (`radio on` / `off` for the current queue) |

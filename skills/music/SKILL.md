@@ -36,7 +36,7 @@ Control playback with the `cmusic` command. It is on PATH when cmusic is install
 | check setup | `cmusic doctor` |
 | install mpv / yt-dlp | `cmusic install` |
 
-`play` and `add` accept a search query (first YouTube result) or a YouTube video/playlist URL.
+`play` and `add` accept a search query or a YouTube video/playlist URL. A query that names a song ("Shape of You Ed Sheeran") plays its official audio release from YouTube Music, whose timing matches the lyrics; ask for `live`, `remix`, `mv`, … or pass a URL to get that video instead. Any other query plays the first YouTube result.
 
 ## When Claude picks the music
 
