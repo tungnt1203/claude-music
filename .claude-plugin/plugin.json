@@ -1,7 +1,7 @@
 {
   "name": "cmusic",
   "displayName": "cmusic",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Background music for Claude Code: play YouTube audio with /music, or let Claude pick songs for your mood.",
   "author": {
     "name": "tungnt1203",

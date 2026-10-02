@@ -23,7 +23,10 @@ usage: music.sh <command> [args]
   seek <+s|-s|m:ss>  seek relative (+30, -10) or absolute (1:30, 90)
   replay             restart the current track
   vol [0-100]        set volume, or print it
-  now [--line]       print the current track (--line: one instant line for a statusline)
+  now --json [--lrc] track state as JSON, for the lyrics pane
+  now [--line [--lyrics]]
+                     print the current track (--line: instant, for a statusline;
+                     --lyrics: add the line being sung, fetched from lrclib.net)
   statusline         print the statusLine setting that shows the current track
   stop               stop playback and quit mpv (fades out)
   stop in <30m|1h>   sleep timer; also: stop after this (end of track), stop cancel
@@ -145,7 +148,7 @@ running() {
 # Extract the "data" string from an mpv reply and undo JSON escapes (\\ first, via a placeholder).
 data_str() {
   sed -n 's/.*"data":"\(.*\)","request_id".*/\1/p' | awk '{
-    gsub(/\\\\/, "\001"); gsub(/\\"/, "\""); gsub(/\\n/, "\n"); gsub(/\\t/, "\t"); gsub(/\\\//, "/")
+    gsub(/\\\\/, "\001"); gsub(/\\"/, "\""); gsub(/\\n/, "\n"); gsub(/\\t/, "\t"); gsub(/\\\//, "/"); gsub(/\\u001f/, "\037")
     gsub(/\001/, "\\"); print }'
 }
 
@@ -344,14 +347,37 @@ case "$cmd" in
     fi
     v=$(expand '${user-data/cmusic/level:${volume}}'); echo "🔊 ${v%%.*}" ;;
   now|status)
+    if [ "${1:-}" = --json ]; then
+      # For the lyrics pane: one object per call, {} when nothing plays. --lrc adds the
+      # synced lyrics. Like --line --lyrics, it starts a lyrics lookup for a new track.
+      fields='${media-title}\x1f${filename}\x1f${pause}\x1f${=time-pos:0}\x1f${=duration:0}\x1f${path}\x1f${user-data/cmusic/lyrics-status:}'
+      [ "${2:-}" = --lrc ] && fields+='\x1f${user-data/cmusic/lyrics-lrc:}'
+      IFS=$'\x1f' read -r -d '' t f p pos dur path lst lrc < <(expand "$(printf "$fields")") || true
+      [ -n "${t:-}" ] || { echo "{}"; exit 0; }
+      lst=${lst%$'\n'} lrc=${lrc%$'\n'}
+      [ -z "$lst" ] && ipc '{"command":["script-message","cmusic-lyrics"]}' >/dev/null
+      loading=false; { [ "$t" = "$f" ] || [[ "$t" == ytsearch* ]]; } && loading=true
+      printf '{"title":"%s","loading":%s,"paused":%s,"pos":%s,"duration":%s,"path":"%s","lyrics":"%s"' \
+        "$(json_escape "$t")" "$loading" "$([ "$p" = yes ] && echo true || echo false)" "${pos:-0}" "${dur:-0}" \
+        "$(json_escape "$path")" "${lst:-loading}"
+      [ "${2:-}" = --lrc ] && printf ',"lrc":"%s"' "$(json_escape "$lrc")"
+      echo "}"; exit 0
+    fi
     if [ "${1:-}" = --line ]; then
       # Statusline: one IPC round trip, no waiting, and silence when nothing plays.
-      IFS=$'\t' read -r t f p pos dur < <(expand $'${media-title}\t${filename}\t${pause}\t${=time-pos:0}\t${=duration:}') || exit 0
+      # Fields are split on \x1f: a tab separator would merge empty fields.
+      IFS=$'\x1f' read -r t f p pos dur lst lline < <(expand $'${media-title}\x1f${filename}\x1f${pause}\x1f${=time-pos:0}\x1f${=duration:}\x1f${user-data/cmusic/lyrics-status:}\x1f${user-data/cmusic/lyrics-line:}') || exit 0
       [ -n "${t:-}" ] || exit 0
       icon="♪"; [ "$p" = yes ] && icon="⏸"
       if [ "$t" = "$f" ] || [[ "$t" == ytsearch* ]]; then echo "$icon loading…"; exit 0; fi
       [ "${#t}" -gt 40 ] && t="${t:0:39}…"
       if [ -n "$dur" ]; then echo "$icon $t · $(mmss "$pos")/$(mmss "$dur")$(timer_text)"; else echo "$icon $t · $(mmss "$pos")$(timer_text)"; fi
+      if [ "${2:-}" = --lyrics ]; then
+        # No lyrics for this track yet: start fetching in the background, show them next refresh.
+        [ -z "$lst" ] && ipc '{"command":["script-message","cmusic-lyrics"]}' >/dev/null
+        [ "${#lline}" -gt 70 ] && lline="${lline:0:69}…"
+        [ "$lst" = ok ] && [ -n "$lline" ] && echo "🎤 $lline"
+      fi
       exit 0
     fi
     running || { echo "⏹ nothing playing"; exit 0; }
@@ -424,13 +450,13 @@ case "$cmd" in
   statusline)
     # Plugin installs live under a versioned cache dir, so resolve the newest one at run time.
     case "$SCRIPT_DIR" in
-      */plugins/cache/*) cmd='"$(ls -td ~/.claude/plugins/cache/cmusic/cmusic/*/ | head -1)bin/cmusic" now --line' ;;
-      *) cmd="\"$SCRIPT_DIR/music.sh\" now --line" ;;
+      */plugins/cache/*) cmd='"$(ls -td ~/.claude/plugins/cache/cmusic/cmusic/*/ | head -1)bin/cmusic" now --line --lyrics' ;;
+      *) cmd="\"$SCRIPT_DIR/music.sh\" now --line --lyrics" ;;
     esac
     cat <<EOF
-Add to ~/.claude/settings.json:
-  "statusLine": { "type": "command", "command": "$(json_escape "$cmd")" }
-Already have a statusline? Append the output of: $cmd
+Add to ~/.claude/settings.json (refreshInterval keeps the time and lyrics moving):
+  "statusLine": { "type": "command", "command": "$(json_escape "$cmd")", "refreshInterval": 1 }
+Drop --lyrics to show only the track. Already have a statusline? Append the output of: $cmd
 EOF
     ;;
   fav|favorite|like)

@@ -86,11 +86,19 @@ Nhờ Claude *"hiện nhạc lên statusline"*, hoặc thêm vào `~/.claude/set
 ```json
 "statusLine": {
   "type": "command",
-  "command": "\"$(ls -td ~/.claude/plugins/cache/cmusic/cmusic/*/ | head -1)bin/cmusic\" now --line"
+  "command": "\"$(ls -td ~/.claude/plugins/cache/cmusic/cmusic/*/ | head -1)bin/cmusic\" now --line --lyrics",
+  "refreshInterval": 1
 }
 ```
 
-Nó in ra `♪ Nơi này có anh · 1:23/4:10` (`⏸` khi tạm dừng) và không in gì khi không có nhạc. Đã có statusline riêng? Nối thêm output của lệnh trên vào statusline của bạn. `cmusic statusline` in ra đúng lệnh cho cách cài của bạn.
+Nó hiện tên bài, và bên dưới là câu hát đang phát, cập nhật mỗi giây:
+
+```
+♪ Nơi này có anh · 1:11/4:38
+🎤 Gió mang câu tình ca, ngàn ánh sao vụt qua, nhẹ ôm lấy em
+```
+
+Khi tạm dừng sẽ hiện `⏸`, không có nhạc thì không hiện gì. Bỏ `--lyrics` nếu chỉ muốn hiện tên bài (và không tra lời bài hát trên lrclib.net). Đã có statusline riêng? Nối thêm output của lệnh trên vào statusline của bạn. `cmusic statusline` in ra đúng lệnh cho cách cài của bạn.
 
 </details>
 

@@ -201,7 +201,7 @@ end)
 -- Lyrics --------------------------------------------------------------------------------
 -- `lyrics`: look the current track up on lrclib.net (free, no key). Publishes
 -- lyrics-status (loading|ok|none|error), lyrics (plain text) and, for synced lyrics,
--- lyrics-line (the line being sung).
+-- lyrics-line (the line being sung) and lyrics-lrc ("<seconds>\t<line>" per line).
 local utils = require "mp.utils"
 local lyrics_cache, synced, line_observer = {}, nil, nil
 
@@ -229,6 +229,7 @@ local function stop_line_observer()
     if line_observer then mp.unobserve_property(line_observer); line_observer = nil end
     synced = nil
     publish("lyrics-line", "")
+    publish("lyrics-lrc", "")
 end
 
 local function show(entry)
@@ -237,6 +238,9 @@ local function show(entry)
     publish("lyrics-status", entry.status)
     synced = entry.synced
     if not synced then return end
+    local lrc = {}
+    for _, l in ipairs(synced) do lrc[#lrc + 1] = ("%.2f\t%s"):format(l.t, (l.text:gsub("\t", " "))) end
+    publish("lyrics-lrc", table.concat(lrc, "\n"))
     local current
     line_observer = function(_, pos)
         if not pos then return end
