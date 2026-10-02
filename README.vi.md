@@ -71,6 +71,7 @@ cp -r cmusic/skills/music ~/.claude/skills/
 | `/music seek +30` · `seek 1:30` · `replay` | Tua trong bài |
 | `/music vol 40` | Chỉnh âm lượng (0–100) |
 | `/music now` | Xem đang phát bài gì |
+| `/music stop in 30m` | Hẹn giờ tắt nhạc, nhỏ dần rồi tắt (`stop after this`: tắt khi hết bài) |
 
 <details>
 <summary>Hiện bài đang phát trên statusline</summary>

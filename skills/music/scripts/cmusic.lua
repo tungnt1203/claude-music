@@ -1,8 +1,8 @@
 -- cmusic.lua — loaded into mpv by music.sh (--script). Runs the parts that must outlive the
--- shell command: fades and, later, timers. music.sh talks to it with `script-message cmusic-*`
+-- shell command: fades and timers. music.sh talks to it with `script-message cmusic-*`
 -- and reads its state from `user-data/cmusic/*`.
 
-local FADE_IN, FADE_OUT = 1.5, 1.0
+local FADE_IN, FADE_OUT, FADE_SLEEP = 1.5, 1.0, 10
 
 -- The volume the user asked for. The real `volume` property dips below it during fades.
 local level = mp.get_property_number("volume", 100)
@@ -50,9 +50,48 @@ mp.register_script_message("cmusic-volume", function(v)
     mp.set_property_number("volume", level)
 end)
 
-mp.register_script_message("cmusic-stop", function()
-    fade(0, FADE_OUT, function() mp.command("quit") end)
+local function fade_quit(secs) fade(0, secs, function() mp.command("quit") end) end
+
+mp.register_script_message("cmusic-stop", function() fade_quit(FADE_OUT) end)
+
+-- Timers -------------------------------------------------------------------------------
+-- One timer at a time. Published as "<icon>|<end epoch or 'track'>" for `now` to display.
+local timer, stop_after_track = nil, false
+
+local function clear_timer()
+    if timer then timer:kill(); timer = nil end
+    stop_after_track = false
+    publish("timer", "")
+end
+
+-- Call `on_done` `lead` seconds before the `secs` mark, so a fade can end right on time.
+local function set_timer(icon, secs, lead, on_done)
+    clear_timer()
+    publish("timer", icon .. "|" .. (os.time() + secs))
+    timer = mp.add_timeout(math.max(0, secs - lead), function() timer = nil; on_done() end)
+end
+
+-- `stop in 30m`: fade out over the last 10 seconds, then quit.
+mp.register_script_message("cmusic-sleep", function(secs)
+    secs = tonumber(secs) or 0
+    local f = math.min(FADE_SLEEP, secs)
+    set_timer("⏲", secs, f, function() fade_quit(f) end)
 end)
+
+-- `stop after this`: fade out as the current track ends, then quit.
+mp.register_script_message("cmusic-sleep-after-track", function()
+    clear_timer()
+    stop_after_track = true
+    publish("timer", "⏲|track")
+end)
+mp.observe_property("time-remaining", "number", function(_, left)
+    if stop_after_track and left and left <= FADE_SLEEP and not fade_timer then fade_quit(left) end
+end)
+mp.register_event("end-file", function(e)
+    if stop_after_track and e.reason == "eof" then mp.command("quit") end
+end)
+
+mp.register_script_message("cmusic-timer-off", clear_timer)
 
 set_level(level)
 publish("ready", "yes")

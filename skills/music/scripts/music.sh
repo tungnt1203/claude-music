@@ -23,7 +23,8 @@ usage: music.sh <command> [args]
   vol [0-100]        set volume, or print it
   now [--line]       print the current track (--line: one instant line for a statusline)
   statusline         print the statusLine setting that shows the current track
-  stop               stop playback and quit mpv
+  stop               stop playback and quit mpv (fades out)
+  stop in <30m|1h>   sleep timer; also: stop after this (end of track), stop cancel
   doctor             check dependencies
   install            install missing dependencies (mpv, yt-dlp)
 EOF
@@ -178,6 +179,28 @@ wait_title() {
   return 1
 }
 
+# 30m / 1h30m / 90s / 45 (minutes) -> seconds
+dur_secs() {
+  local s=$1 total=0
+  [[ $s =~ ^[0-9]+$ ]] && { echo $(( s * 60 )); return 0; }
+  while [[ $s =~ ^([0-9]+)(h|m|s|min)(.*)$ ]]; do
+    case ${BASH_REMATCH[2]} in h) total=$(( total + BASH_REMATCH[1] * 3600 )) ;; s) total=$(( total + BASH_REMATCH[1] )) ;;
+      *) total=$(( total + BASH_REMATCH[1] * 60 )) ;; esac
+    s=${BASH_REMATCH[3]}
+  done
+  [ -z "$s" ] && [ "$total" -gt 0 ] && echo "$total"
+}
+
+# The running timer as " · ⏲ 12:34 left", or nothing.
+timer_text() {
+  local t; t=$(expand '${user-data/cmusic/timer:}')
+  case "$t" in
+    "") ;;
+    *"|track") printf ' · %s after this track' "${t%%|*}" ;;
+    *) printf ' · %s %s left' "${t%%|*}" "$(mmss $(( ${t#*|} - $(date +%s) )))" ;;
+  esac
+}
+
 # True once cmusic.lua is running inside mpv (needs Lua and mpv >= 0.36 for user-data).
 lua_ready() { [ "$(expand '${user-data/cmusic/ready:no}')" = yes ]; }
 
@@ -288,12 +311,26 @@ case "$cmd" in
       icon="♪"; [ "$p" = yes ] && icon="⏸"
       if [ "$t" = "$f" ] || [[ "$t" == ytsearch* ]]; then echo "$icon loading…"; exit 0; fi
       [ "${#t}" -gt 40 ] && t="${t:0:39}…"
-      if [ -n "$dur" ]; then echo "$icon $t · $(mmss "$pos")/$(mmss "$dur")"; else echo "$icon $t · $(mmss "$pos")"; fi
+      if [ -n "$dur" ]; then echo "$icon $t · $(mmss "$pos")/$(mmss "$dur")$(timer_text)"; else echo "$icon $t · $(mmss "$pos")$(timer_text)"; fi
       exit 0
     fi
     running || { echo "⏹ nothing playing"; exit 0; }
-    t=$(wait_title) && echo "▶ $t" || echo "▶ loading…" ;;
+    t=$(wait_title) && echo "▶ $t$(timer_text)" || echo "▶ loading…" ;;
   stop)
+    if [ $# -gt 0 ]; then
+      running || { echo "⏹ nothing playing"; exit 0; }
+      lua_ready || { echo "✗ timers need mpv >= 0.36 with Lua (see: doctor)" >&2; exit 1; }
+      [ "$1" = in ] && shift
+      case "${1:-}" in
+        after|this|track) ipc '{"command":["script-message","cmusic-sleep-after-track"]}' >/dev/null
+          echo "⏲ stopping after this track" ;;
+        cancel|off) ipc '{"command":["script-message","cmusic-timer-off"]}' >/dev/null; echo "⏲ timer off" ;;
+        *) secs=$(dur_secs "$1") || { echo "usage: stop in 30m | stop after this | stop cancel" >&2; exit 1; }
+          ipc "{\"command\":[\"script-message\",\"cmusic-sleep\",\"$secs\"]}" >/dev/null
+          echo "⏲ stopping in $(mmss "$secs")" ;;
+      esac
+      exit 0
+    fi
     if running && lua_ready; then
       # cmusic.lua fades out and quits; wait for it, then make sure.
       ipc '{"command":["script-message","cmusic-stop"]}' >/dev/null

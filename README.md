@@ -71,6 +71,7 @@ cp -r cmusic/skills/music ~/.claude/skills/
 | `/music seek +30` · `seek 1:30` · `replay` | Jump within the track |
 | `/music vol 40` | Set the volume (0–100) |
 | `/music now` | Show what's playing |
+| `/music stop in 30m` | Sleep timer, with a gentle fade-out (`stop after this` waits for the song to end) |
 
 <details>
 <summary>Show the current track in the statusline</summary>

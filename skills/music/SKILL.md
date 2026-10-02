@@ -22,6 +22,7 @@ Control playback with the `cmusic` command. It is on PATH when cmusic is install
 | volume | `cmusic vol 50` (no number prints the current volume) |
 | what's playing | `cmusic now` |
 | stop | `cmusic stop` |
+| sleep timer / stop when this song ends / cancel it | `cmusic stop in 30m` · `stop after this` · `stop cancel` |
 | show the track in Claude Code's statusline | `cmusic statusline` (see Notes) |
 | check setup | `cmusic doctor` |
 | install mpv / yt-dlp | `cmusic install` |
